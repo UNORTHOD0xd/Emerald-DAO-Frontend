@@ -2,6 +2,10 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
+import { useRouter } from 'next/navigation';
+import { useAccount } from 'wagmi';
+import { ConnectButton } from '@rainbow-me/rainbowkit';
+import { useEmeraldDAO } from '@/hooks/useEmeraldDAO';
 
 // TypeScript interfaces
 interface EmeraldLogoProps {
@@ -15,6 +19,79 @@ interface FeatureSectionProps {
   reverse?: boolean;
 }
 
+// Custom Connect Button Component using RainbowKit
+const CustomConnectButton: React.FC = () => {
+  return (
+    <ConnectButton.Custom>
+      {({
+        account,
+        chain,
+        openAccountModal,
+        openChainModal,
+        openConnectModal,
+        authenticationStatus,
+        mounted,
+      }) => {
+        const ready = mounted && authenticationStatus !== 'loading';
+        const connected =
+          ready &&
+          account &&
+          chain &&
+          (!authenticationStatus ||
+            authenticationStatus === 'authenticated');
+
+        return (
+          <div
+            {...(!ready && {
+              'aria-hidden': true,
+              style: {
+                opacity: 0,
+                pointerEvents: 'none',
+                userSelect: 'none',
+              },
+            })}
+          >
+            {(() => {
+              if (!connected) {
+                return (
+                  <button
+                    onClick={openConnectModal}
+                    className="bg-black text-white px-6 py-2 rounded-full hover:bg-gray-800 transition-colors font-medium"
+                  >
+                    Connect Wallet
+                  </button>
+                );
+              }
+
+              if (chain.unsupported) {
+                return (
+                  <button
+                    onClick={openChainModal}
+                    className="bg-red-600 text-white px-6 py-2 rounded-full hover:bg-red-700 transition-colors font-medium"
+                  >
+                    Wrong network
+                  </button>
+                );
+              }
+
+              return (
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={openAccountModal}
+                    className="bg-emerald-600 text-white px-4 py-2 rounded-full hover:bg-emerald-700 transition-colors font-medium text-sm"
+                  >
+                    {account.displayName}
+                  </button>
+                </div>
+              );
+            })()}
+          </div>
+        );
+      }}
+    </ConnectButton.Custom>
+  );
+};
+
 // Emerald Diamond Logo Component
 const EmeraldLogo: React.FC<EmeraldLogoProps> = ({ className = "w-8 h-8" }) => (
   <div className={`${className} relative`}>
@@ -26,53 +103,101 @@ const EmeraldLogo: React.FC<EmeraldLogoProps> = ({ className = "w-8 h-8" }) => (
   </div>
 );
 
-// Header Component
-const Header = () => (
-  <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100">
-    <div className="max-w-7xl mx-auto px-6 lg:px-8">
-      <div className="flex justify-between items-center py-4">
-        <div className="flex items-center space-x-3">
-          <EmeraldLogo className="w-10 h-10" />
-          <span className="text-xl font-semibold text-gray-900 hidden sm:block">
-            Emerald DAO
-          </span>
-        </div>
-        <button className="bg-black text-white px-6 py-2 rounded-full hover:bg-gray-800 transition-colors font-medium">
-          Connect Wallet
-        </button>
-      </div>
-    </div>
-  </header>
-);
+// Header Component with Web3 Integration
+const Header: React.FC = () => {
+  const { isConnected } = useAccount();
+  const router = useRouter();
 
-// Hero Section
-const HeroSection = () => (
-  <section className="pt-32 pb-20 px-6 lg:px-8">
-    <div className="max-w-4xl mx-auto text-center">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8 }}
-      >
-        <h1 className="text-5xl lg:text-7xl font-bold text-black mb-6 leading-tight">
-          Real estate. On-chain.
-        </h1>
-        <p className="text-xl lg:text-2xl text-gray-500 mb-12 font-light leading-relaxed">
-          Fractionalize property ownership via Emerald DAO.
-        </p>
-        
-        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-          <button className="bg-black text-white px-8 py-3 rounded-full hover:bg-gray-800 transition-colors font-medium">
-            Enter the DAO
-          </button>
-          <button className="text-black border border-gray-300 px-8 py-3 rounded-full hover:border-gray-400 transition-colors font-medium">
-            Connect Wallet
-          </button>
+  const handleDashboardAccess = () => {
+    if (isConnected) {
+      router.push('/dashboard');
+    }
+  };
+
+  return (
+    <header className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100">
+      <div className="max-w-7xl mx-auto px-6 lg:px-8">
+        <div className="flex justify-between items-center py-4">
+          <div className="flex items-center space-x-3">
+            <EmeraldLogo className="w-10 h-10" />
+            <span className="text-xl font-semibold text-gray-900 hidden sm:block">
+              Emerald DAO
+            </span>
+          </div>
+          <div className="flex items-center space-x-4">
+            {isConnected && (
+              <button 
+                onClick={handleDashboardAccess}
+                className="text-gray-700 hover:text-gray-900 font-medium transition-colors"
+              >
+                Dashboard
+              </button>
+            )}
+            <CustomConnectButton />
+          </div>
         </div>
-      </motion.div>
-    </div>
-  </section>
-);
+      </div>
+    </header>
+  );
+};
+
+// Hero Section with Integrated Functionality
+const HeroSection: React.FC = () => {
+  const router = useRouter();
+  const { isConnected } = useAccount();
+  const { isDAOMember, balance } = useEmeraldDAO();
+  
+  const handleEnterDAO = () => {
+    if (isConnected) {
+      router.push('/dashboard');
+    }
+    // If not connected, the CustomConnectButton will handle the connection
+  };
+
+  return (
+    <section className="pt-32 pb-20 px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto text-center">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
+        >
+          <h1 className="text-5xl lg:text-7xl font-bold text-black mb-6 leading-tight">
+            Real estate. On-chain.
+          </h1>
+          <p className="text-xl lg:text-2xl text-gray-500 mb-8 font-light leading-relaxed">
+            Fractionalize property ownership via Emerald DAO.
+          </p>
+          
+          {/* Connection Status Display */}
+          {isConnected && (
+            <div className="mb-8 p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
+              <p className="text-emerald-800 font-medium">
+                {isDAOMember ? 
+                  `Welcome back! You hold ${balance} ERLD tokens` : 
+                  'Connected! Acquire ERLD tokens to join the DAO'
+                }
+              </p>
+            </div>
+          )}
+          
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+            <button 
+              onClick={handleEnterDAO}
+              className="bg-black text-white px-8 py-3 rounded-full hover:bg-gray-800 transition-colors font-medium"
+            >
+              {isConnected ? 
+                (isDAOMember ? 'Enter the DAO' : 'View Dashboard') : 
+                'Connect & Enter DAO'
+              }
+            </button>
+            <CustomConnectButton />
+          </div>
+        </motion.div>
+      </div>
+    </section>
+  );
+};
 
 // Feature Section Component
 const FeatureSection: React.FC<FeatureSectionProps> = ({ title, description, imagePlaceholder, reverse = false }) => (
@@ -112,75 +237,130 @@ const FeatureSection: React.FC<FeatureSectionProps> = ({ title, description, ima
   </section>
 );
 
-// Stats Section
-const StatsSection = () => (
-  <section className="py-24 px-6 lg:px-8 bg-gray-50">
-    <div className="max-w-4xl mx-auto text-center">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8 }}
-        viewport={{ once: true }}
-        className="grid grid-cols-1 md:grid-cols-3 gap-12"
-      >
-        <div>
-          <div className="text-5xl lg:text-6xl font-bold text-black mb-2">
-            20K+
+// Stats Section with Real Data
+const StatsSection: React.FC = () => {
+  const { treasuryBalance, totalProperties, stats } = useEmeraldDAO();
+  
+  return (
+    <section className="py-24 px-6 lg:px-8 bg-gray-50">
+      <div className="max-w-4xl mx-auto text-center">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
+          viewport={{ once: true }}
+          className="grid grid-cols-1 md:grid-cols-3 gap-12"
+        >
+          <div>
+            <div className="text-5xl lg:text-6xl font-bold text-black mb-2">
+              {stats.memberCount}
+            </div>
+            <div className="text-lg text-gray-500 font-light">
+              DAO Members
+            </div>
           </div>
-          <div className="text-lg text-gray-500 font-light">
-            DAO Members
+          
+          <div>
+            <div className="text-5xl lg:text-6xl font-bold text-black mb-2">
+              {totalProperties}+
+            </div>
+            <div className="text-lg text-gray-500 font-light">
+              Properties Tokenized
+            </div>
           </div>
-        </div>
-        
-        <div>
-          <div className="text-5xl lg:text-6xl font-bold text-black mb-2">
-            100+
+          
+          <div>
+            <div className="text-5xl lg:text-6xl font-bold text-black mb-2">
+              {parseFloat(treasuryBalance).toFixed(1)} ETH
+            </div>
+            <div className="text-lg text-gray-500 font-light">
+              Value Secured
+            </div>
           </div>
-          <div className="text-lg text-gray-500 font-light">
-            Properties Tokenized
-          </div>
-        </div>
-        
-        <div>
-          <div className="text-5xl lg:text-6xl font-bold text-black mb-2">
-            $50M+
-          </div>
-          <div className="text-lg text-gray-500 font-light">
-            Value Secured
-          </div>
-        </div>
-      </motion.div>
-    </div>
-  </section>
-);
+        </motion.div>
+      </div>
+    </section>
+  );
+};
 
-// CTA Section
-const CTASection = () => (
-  <section className="py-24 px-6 lg:px-8">
-    <div className="max-w-4xl mx-auto text-center">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8 }}
-        viewport={{ once: true }}
-      >
-        <h2 className="text-4xl lg:text-5xl font-bold text-black mb-6 leading-tight">
-          Join Emerald DAO today.
-        </h2>
-        <p className="text-lg text-gray-600 mb-12 leading-relaxed font-light max-w-2xl mx-auto">
-          Shape the future of real estate—mint your badge and vote in our treasury.
-        </p>
-        
-        <button className="bg-black text-white px-8 py-3 rounded-full hover:bg-gray-800 transition-colors font-medium">
-          Mint DAO Badge
-        </button>
-      </motion.div>
-    </div>
-  </section>
-);
+// CTA Section with Dynamic Content
+const CTASection: React.FC = () => {
+  const { isConnected } = useAccount();
+  const { isDAOMember } = useEmeraldDAO();
+  const router = useRouter();
+
+  const handleCTAClick = () => {
+    if (isConnected && isDAOMember) {
+      router.push('/dashboard');
+    } else if (isConnected) {
+      // Direct to token acquisition or dashboard
+      router.push('/dashboard');
+    }
+    // If not connected, the user needs to use the Connect Wallet buttons above
+  };
+
+  const getCtaText = () => {
+    if (isConnected && isDAOMember) {
+      return 'Access Your Dashboard';
+    } else if (isConnected) {
+      return 'Join the DAO';
+    } else {
+      return 'Connect Wallet Above';
+    }
+  };
+
+  const getDescriptionText = () => {
+    if (isConnected && isDAOMember) {
+      return 'Access your personalized DAO dashboard and participate in governance decisions.';
+    } else if (isConnected) {
+      return 'Acquire ERLD tokens to become a member and participate in real estate governance.';
+    } else {
+      return 'Connect your wallet using the buttons above to join our community and access the DAO.';
+    }
+  };
+
+  return (
+    <section className="py-24 px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto text-center">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8 }}
+          viewport={{ once: true }}
+        >
+          <h2 className="text-4xl lg:text-5xl font-bold text-black mb-6 leading-tight">
+            {isConnected && isDAOMember ? 
+              'Welcome back, DAO member.' : 
+              'Join Emerald DAO today.'
+            }
+          </h2>
+          <p className="text-lg text-gray-600 mb-12 leading-relaxed font-light max-w-2xl mx-auto">
+            {getDescriptionText()}
+          </p>
+          
+          {isConnected ? (
+            <button 
+              onClick={handleCTAClick}
+              className="bg-black text-white px-8 py-3 rounded-full hover:bg-gray-800 transition-colors font-medium"
+            >
+              {getCtaText()}
+            </button>
+          ) : (
+            <div className="space-y-4">
+              <CustomConnectButton />
+              <p className="text-sm text-gray-500">
+                Connect your wallet to get started
+              </p>
+            </div>
+          )}
+        </motion.div>
+      </div>
+    </section>
+  );
+};
 
 // Footer Component
-const Footer = () => (
+const Footer: React.FC = () => (
   <footer className="py-16 px-6 lg:px-8 border-t border-gray-200">
     <div className="max-w-7xl mx-auto">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
@@ -225,7 +405,7 @@ const Footer = () => (
 );
 
 // Main Landing Page Component
-const EmeraldDAOLanding = () => {
+const EmeraldDAOLanding: React.FC = () => {
   return (
     <div className="min-h-screen bg-white">
       <Header />
