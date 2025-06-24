@@ -70,7 +70,7 @@ export const WithdrawalProposalModal: React.FC<WithdrawalProposalModalProps> = (
   };
 
   const formatETH = (amount: number) => {
-    return `${amount.toFixed(4)} ETH`;
+    return `${(amount || 0).toFixed(4)} ETH`;
   };
 
   // Calculate limits and warnings

@@ -12,24 +12,7 @@ import {
 } from 'lucide-react';
 import { Card, CardContent, CardFooter, Button, Badge } from '@/components/ui';
 
-interface PropertyData {
-  id: string;
-  tokenId: number;
-  address: string;
-  city: string;
-  state: string;
-  propertyType: 'Residential' | 'Commercial' | 'Industrial' | 'Mixed-Use';
-  estimatedValue: number;
-  monthlyRent: number;
-  acquisitionPrice: number;
-  acquisitionDate: string;
-  imageUrl?: string;
-  metadataURI: string;
-  confidenceScore: number;
-  lastValuationUpdate: string;
-  roiPercentage: number;
-  status: 'Active' | 'Pending' | 'Under Review';
-}
+import { PropertyData } from '@/hooks/usePropertyData';
 
 interface PropertyCardProps {
   property: PropertyData;

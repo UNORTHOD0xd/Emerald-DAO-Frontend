@@ -9,41 +9,26 @@ import {
   AlertTriangle,
   Activity,
   PieChart,
-  BarChart3
+  BarChart3,
+  RefreshCw
 } from 'lucide-react';
 import { 
   Card, 
   CardContent, 
   CardHeader, 
   Badge, 
-  HealthScoreBadge 
+  HealthScoreBadge,
+  Button 
 } from '@/components/ui';
-import { PieChart as RechartsPieChart, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
-
-interface TreasuryData {
-  totalValue: number;
-  ethBalance: number;
-  erc20Holdings: Array<{
-    token: string;
-    symbol: string;
-    balance: number;
-    valueUSD: number;
-  }>;
-  monthlyIncome: number;
-  monthlyExpenses: number;
-  healthScore: number;
-  emergencyMode: boolean;
-  riskMetrics: {
-    dailyLimit: number;
-    monthlyLimit: number;
-    emergencySpendingToday: number;
-    circuitBreakersActive: number;
-  };
-}
+import { PieChart as RechartsPieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
+import { RealTreasuryData } from '@/hooks/useRealTreasuryData';
 
 interface TreasuryOverviewProps {
-  treasuryData: TreasuryData;
+  treasuryData: RealTreasuryData;
   loading?: boolean;
+  onRefresh?: () => void;
+  hasRealData?: boolean;
+  isRefreshing?: boolean;
 }
 
 const COLORS = ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444'];
@@ -51,6 +36,9 @@ const COLORS = ['#10b981', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444'];
 export const TreasuryOverview: React.FC<TreasuryOverviewProps> = ({
   treasuryData,
   loading = false,
+  onRefresh,
+  hasRealData = false,
+  isRefreshing = false,
 }) => {
   const formatCurrency = (amount: number, currency = 'USD') => {
     return new Intl.NumberFormat('en-US', {
@@ -62,35 +50,52 @@ export const TreasuryOverview: React.FC<TreasuryOverviewProps> = ({
   };
 
   const formatETH = (amount: number) => {
-    return `${amount.toFixed(2)} ETH`;
+    return `${(amount || 0).toFixed(2)} ETH`;
   };
 
-  // Prepare data for charts
+  // Prepare data for charts - using real asset allocation percentages with safe defaults
   const assetAllocation = [
-    { name: 'ETH', value: treasuryData.ethBalance, color: '#10b981' },
-    ...treasuryData.erc20Holdings.map((token, index) => ({
-      name: token.symbol,
-      value: token.valueUSD,
-      color: COLORS[index + 1] || '#6b7280'
-    }))
+    { 
+      name: 'ETH', 
+      value: treasuryData?.ethValueUSD || 0, 
+      percentage: treasuryData?.assetAllocation?.eth || 0,
+      color: '#10b981' 
+    },
+    ...(treasuryData?.erc20Holdings || [])
+      .filter(token => (token?.valueUSD || 0) > 0)
+      .map((token, index) => ({
+        name: token?.symbol || 'Unknown',
+        value: token?.valueUSD || 0,
+        percentage: treasuryData?.totalValue ? ((token?.valueUSD || 0) / treasuryData.totalValue) * 100 : 0,
+        color: COLORS[index + 1] || '#6b7280',
+        change24h: token?.change24h || 0,
+        isStablecoin: token?.isStablecoin || false
+      }))
   ];
+
+  // Diversification data for enhanced visualization with safe defaults
+  const diversificationData = [
+    { name: 'ETH', value: treasuryData?.assetAllocation?.eth || 0, color: '#10b981' },
+    { name: 'Stablecoins', value: treasuryData?.assetAllocation?.stablecoins || 0, color: '#3b82f6' },
+    { name: 'Altcoins', value: treasuryData?.assetAllocation?.altcoins || 0, color: '#8b5cf6' },
+  ].filter(item => item.value > 0);
 
   const monthlyFlowData = [
     {
       name: 'Income',
-      value: treasuryData.monthlyIncome,
+      value: treasuryData?.monthlyIncome || 0,
       fill: '#10b981'
     },
     {
       name: 'Expenses',
-      value: treasuryData.monthlyExpenses,
+      value: treasuryData?.monthlyExpenses || 0,
       fill: '#ef4444'
     }
   ];
 
-  const netCashFlow = treasuryData.monthlyIncome - treasuryData.monthlyExpenses;
-  const burnRate = treasuryData.monthlyExpenses > 0 
-    ? treasuryData.totalValue / treasuryData.monthlyExpenses 
+  const netCashFlow = (treasuryData?.monthlyIncome || 0) - (treasuryData?.monthlyExpenses || 0);
+  const burnRate = (treasuryData?.monthlyExpenses || 0) > 0 
+    ? (treasuryData?.totalValue || 0) / (treasuryData?.monthlyExpenses || 1) 
     : Infinity;
 
   if (loading) {
@@ -109,8 +114,37 @@ export const TreasuryOverview: React.FC<TreasuryOverviewProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* Data Source Indicator */}
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center space-x-2">
+          <Badge variant={hasRealData ? 'success' : 'info'} size="sm">
+            {hasRealData ? '🔗 Live Contract Data' : '📋 Demo Data'}
+          </Badge>
+          {(treasuryData?.erc20Holdings?.length || 0) > 0 && (
+            <span className="text-xs text-gray-500">
+              Tracking {treasuryData?.erc20Holdings?.length || 0} ERC20 tokens
+            </span>
+          )}
+        </div>
+        {onRefresh && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onRefresh}
+            disabled={isRefreshing}
+            leftIcon={
+              <RefreshCw 
+                size={16} 
+                className={isRefreshing ? 'animate-spin' : ''} 
+              />
+            }
+          >
+            {isRefreshing ? 'Refreshing...' : 'Refresh'}
+          </Button>
+        )}
+      </div>
       {/* Emergency Alert */}
-      {treasuryData.emergencyMode && (
+      {treasuryData?.emergencyMode && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
           <div className="flex items-center space-x-3">
             <AlertTriangle className="text-red-600" size={24} />
@@ -132,10 +166,10 @@ export const TreasuryOverview: React.FC<TreasuryOverviewProps> = ({
               <div>
                 <p className="text-sm font-medium text-gray-600">Total Value</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {formatCurrency(treasuryData.totalValue)}
+                  {formatCurrency(treasuryData?.totalValue || 0)}
                 </p>
                 <p className="text-sm text-gray-500 mt-1">
-                  {formatETH(treasuryData.ethBalance)} ETH
+                  {formatETH(treasuryData?.ethBalance || 0)} ETH • {treasuryData?.erc20Holdings?.length || 0} tokens
                 </p>
               </div>
               <div className="p-3 bg-emerald-100 rounded-full">
@@ -154,7 +188,7 @@ export const TreasuryOverview: React.FC<TreasuryOverviewProps> = ({
                   {netCashFlow >= 0 ? '+' : ''}{formatCurrency(netCashFlow)}
                 </p>
                 <p className="text-sm text-gray-500 mt-1">
-                  Income: {formatCurrency(treasuryData.monthlyIncome)}
+                  Income: {formatCurrency(treasuryData?.monthlyIncome || 0)}
                 </p>
               </div>
               <div className={`p-3 rounded-full ${netCashFlow >= 0 ? 'bg-green-100' : 'bg-red-100'}`}>
@@ -175,22 +209,22 @@ export const TreasuryOverview: React.FC<TreasuryOverviewProps> = ({
                 <p className="text-sm font-medium text-gray-600">Health Score</p>
                 <div className="flex items-center space-x-2">
                   <p className="text-2xl font-bold text-gray-900">
-                    {treasuryData.healthScore}
+                    {treasuryData?.healthScore || 0}
                   </p>
-                  <HealthScoreBadge score={treasuryData.healthScore} />
+                  <HealthScoreBadge score={treasuryData?.healthScore || 0} />
                 </div>
                 <p className="text-sm text-gray-500 mt-1">
-                  {treasuryData.healthScore >= 80 ? 'Excellent' :
-                   treasuryData.healthScore >= 60 ? 'Good' : 'Needs attention'}
+                  {(treasuryData?.healthScore || 0) >= 80 ? 'Excellent' :
+                   (treasuryData?.healthScore || 0) >= 60 ? 'Good' : 'Needs attention'}
                 </p>
               </div>
               <div className={`p-3 rounded-full ${
-                treasuryData.healthScore >= 80 ? 'bg-green-100' :
-                treasuryData.healthScore >= 60 ? 'bg-yellow-100' : 'bg-red-100'
+                (treasuryData?.healthScore || 0) >= 80 ? 'bg-green-100' :
+                (treasuryData?.healthScore || 0) >= 60 ? 'bg-yellow-100' : 'bg-red-100'
               }`}>
                 <Shield className={
-                  treasuryData.healthScore >= 80 ? 'text-green-600' :
-                  treasuryData.healthScore >= 60 ? 'text-yellow-600' : 'text-red-600'
+                  (treasuryData?.healthScore || 0) >= 80 ? 'text-green-600' :
+                  (treasuryData?.healthScore || 0) >= 60 ? 'text-yellow-600' : 'text-red-600'
                 } size={24} />
               </div>
             </div>
@@ -226,19 +260,44 @@ export const TreasuryOverview: React.FC<TreasuryOverviewProps> = ({
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
                 <RechartsPieChart>
-                  <RechartsPieChart data={assetAllocation}>
-                    {assetAllocation.map((entry, index) => (
+                  <Pie
+                    data={diversificationData}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, value }) => `${name} ${value.toFixed(1)}%`}
+                    outerRadius={80}
+                    fill="#8884d8"
+                    dataKey="value"
+                  >
+                    {diversificationData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
-                  </RechartsPieChart>
+                  </Pie>
                   <Tooltip 
-                    formatter={(value: number) => [formatCurrency(value), 'Value']}
+                    formatter={(value: number) => [`${value.toFixed(1)}%`, 'Allocation']}
                   />
                   <Legend />
                 </RechartsPieChart>
               </ResponsiveContainer>
             </div>
-            <div className="mt-4 space-y-2">
+            <div className="mt-4 space-y-3">
+              {/* Diversification Summary */}
+              <div className="grid grid-cols-3 gap-4 text-center text-sm border-t pt-3">
+                <div>
+                  <p className="text-gray-600">ETH</p>
+                  <p className="font-semibold">{(treasuryData?.assetAllocation?.eth || 0).toFixed(1)}%</p>
+                </div>
+                <div>
+                  <p className="text-gray-600">Stablecoins</p>
+                  <p className="font-semibold">{(treasuryData?.assetAllocation?.stablecoins || 0).toFixed(1)}%</p>
+                </div>
+                <div>
+                  <p className="text-gray-600">Altcoins</p>
+                  <p className="font-semibold">{(treasuryData?.assetAllocation?.altcoins || 0).toFixed(1)}%</p>
+                </div>
+              </div>
+              {/* Individual Assets */}
               {assetAllocation.map((asset, index) => (
                 <div key={index} className="flex items-center justify-between text-sm">
                   <div className="flex items-center space-x-2">
@@ -247,8 +306,18 @@ export const TreasuryOverview: React.FC<TreasuryOverviewProps> = ({
                       style={{ backgroundColor: asset.color }}
                     />
                     <span>{asset.name}</span>
+                    {asset.isStablecoin && (
+                      <Badge variant="info" size="sm">Stable</Badge>
+                    )}
                   </div>
-                  <span className="font-medium">{formatCurrency(asset.value)}</span>
+                  <div className="text-right">
+                    <span className="font-medium">{formatCurrency(asset.value)}</span>
+                    {asset.change24h !== undefined && (
+                      <div className={`text-xs ${asset.change24h >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {asset.change24h >= 0 ? '+' : ''}{asset.change24h.toFixed(2)}% 24h
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -274,13 +343,13 @@ export const TreasuryOverview: React.FC<TreasuryOverviewProps> = ({
               <div className="text-center p-3 bg-green-50 rounded-lg">
                 <p className="text-green-600 font-medium">Monthly Income</p>
                 <p className="text-lg font-bold text-green-900">
-                  {formatCurrency(treasuryData.monthlyIncome)}
+                  {formatCurrency(treasuryData?.monthlyIncome || 0)}
                 </p>
               </div>
               <div className="text-center p-3 bg-red-50 rounded-lg">
                 <p className="text-red-600 font-medium">Monthly Expenses</p>
                 <p className="text-lg font-bold text-red-900">
-                  {formatCurrency(treasuryData.monthlyExpenses)}
+                  {formatCurrency(treasuryData?.monthlyExpenses || 0)}
                 </p>
               </div>
             </div>
@@ -296,19 +365,19 @@ export const TreasuryOverview: React.FC<TreasuryOverviewProps> = ({
             <div className="text-center">
               <p className="text-sm text-gray-600 mb-2">Daily Spending Limit</p>
               <p className="text-lg font-semibold text-gray-900">
-                {formatCurrency(treasuryData.riskMetrics.dailyLimit)}
+                {formatCurrency(treasuryData?.riskMetrics?.dailyLimit || 0)}
               </p>
               <div className="mt-2">
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div 
                     className="bg-blue-500 h-2 rounded-full transition-all duration-300"
                     style={{ 
-                      width: `${Math.min(100, (treasuryData.riskMetrics.emergencySpendingToday / treasuryData.riskMetrics.dailyLimit) * 100)}%` 
+                      width: `${Math.min(100, ((treasuryData?.riskMetrics?.emergencySpendingToday || 0) / (treasuryData?.riskMetrics?.dailyLimit || 1)) * 100)}%` 
                     }}
                   />
                 </div>
                 <p className="text-xs text-gray-500 mt-1">
-                  {formatCurrency(treasuryData.riskMetrics.emergencySpendingToday)} used today
+                  {formatCurrency(treasuryData?.riskMetrics?.emergencySpendingToday || 0)} used today
                 </p>
               </div>
             </div>
@@ -316,7 +385,7 @@ export const TreasuryOverview: React.FC<TreasuryOverviewProps> = ({
             <div className="text-center">
               <p className="text-sm text-gray-600 mb-2">Monthly Spending Limit</p>
               <p className="text-lg font-semibold text-gray-900">
-                {formatCurrency(treasuryData.riskMetrics.monthlyLimit)}
+                {formatCurrency(treasuryData?.riskMetrics?.monthlyLimit || 0)}
               </p>
               <p className="text-xs text-gray-500 mt-2">
                 Resets monthly
@@ -327,10 +396,10 @@ export const TreasuryOverview: React.FC<TreasuryOverviewProps> = ({
               <p className="text-sm text-gray-600 mb-2">Circuit Breakers</p>
               <div className="flex items-center justify-center space-x-2">
                 <p className="text-lg font-semibold text-gray-900">
-                  {treasuryData.riskMetrics.circuitBreakersActive}
+                  {treasuryData?.riskMetrics?.circuitBreakersActive || 0}
                 </p>
-                <Badge variant={treasuryData.riskMetrics.circuitBreakersActive > 0 ? 'warning' : 'success'}>
-                  {treasuryData.riskMetrics.circuitBreakersActive > 0 ? 'Active' : 'Normal'}
+                <Badge variant={(treasuryData?.riskMetrics?.circuitBreakersActive || 0) > 0 ? 'warning' : 'success'}>
+                  {(treasuryData?.riskMetrics?.circuitBreakersActive || 0) > 0 ? 'Active' : 'Normal'}
                 </Badge>
               </div>
               <p className="text-xs text-gray-500 mt-2">
@@ -341,9 +410,9 @@ export const TreasuryOverview: React.FC<TreasuryOverviewProps> = ({
             <div className="text-center">
               <p className="text-sm text-gray-600 mb-2">Security Status</p>
               <div className="flex items-center justify-center space-x-2">
-                <Shield className={`${treasuryData.emergencyMode ? 'text-red-600' : 'text-green-600'}`} size={20} />
-                <Badge variant={treasuryData.emergencyMode ? 'error' : 'success'}>
-                  {treasuryData.emergencyMode ? 'Emergency' : 'Secure'}
+                <Shield className={`${treasuryData?.emergencyMode ? 'text-red-600' : 'text-green-600'}`} size={20} />
+                <Badge variant={treasuryData?.emergencyMode ? 'error' : 'success'}>
+                  {treasuryData?.emergencyMode ? 'Emergency' : 'Secure'}
                 </Badge>
               </div>
               <p className="text-xs text-gray-500 mt-2">
@@ -371,28 +440,38 @@ export const TreasuryOverview: React.FC<TreasuryOverviewProps> = ({
                 </div>
               </div>
               <div className="text-right">
-                <p className="font-medium">{formatETH(treasuryData.ethBalance)}</p>
+                <p className="font-medium">{formatETH(treasuryData?.ethBalance || 0)}</p>
                 <p className="text-sm text-gray-600">
-                  {formatCurrency(treasuryData.ethBalance * 2000)} {/* Mock ETH price */}
+                  {formatCurrency(treasuryData?.ethValueUSD || 0)}
                 </p>
               </div>
             </div>
 
             {/* ERC20 Tokens */}
-            {treasuryData.erc20Holdings.map((token, index) => (
+            {(treasuryData?.erc20Holdings || []).map((token, index) => (
               <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                 <div className="flex items-center space-x-3">
                   <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">
                     <span className="text-xs font-medium">{token.symbol}</span>
                   </div>
                   <div>
-                    <p className="font-medium">{token.token}</p>
-                    <p className="text-sm text-gray-600">{token.symbol}</p>
+                    <div className="flex items-center space-x-2">
+                      <p className="font-medium">{token.token}</p>
+                      {token.isStablecoin && (
+                        <Badge variant="info" size="sm">Stable</Badge>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-600">{token.symbol} • ${(token.priceUSD || 0).toLocaleString()}</p>
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="font-medium">{token.balance.toLocaleString()}</p>
-                  <p className="text-sm text-gray-600">{formatCurrency(token.valueUSD)}</p>
+                  <p className="font-medium">{(token.balance || 0).toLocaleString()}</p>
+                  <div className="flex items-center space-x-2">
+                    <p className="text-sm text-gray-600">{formatCurrency(token.valueUSD || 0)}</p>
+                    <span className={`text-xs ${(token.change24h || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {(token.change24h || 0) >= 0 ? '+' : ''}{(token.change24h || 0).toFixed(2)}%
+                    </span>
+                  </div>
                 </div>
               </div>
             ))}

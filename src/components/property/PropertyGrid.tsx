@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { Search, Filter, SortAsc, SortDesc, Grid, List } from 'lucide-react';
-import { PropertyCard, PropertyData } from './PropertyCard';
+import { Search, Filter, SortAsc, SortDesc, Grid, List, RefreshCw, BarChart3 } from 'lucide-react';
+import { PropertyCard } from './PropertyCard';
 import { PropertyDetailsModal } from './PropertyDetailsModal';
 import { 
   Input, 
@@ -11,11 +11,12 @@ import {
   LoadingState, 
   SkeletonCard 
 } from '@/components/ui';
+import { usePropertyData, PropertyData } from '@/hooks/usePropertyData';
+import { useRealPropertyData, RealPropertyData } from '@/hooks/useRealPropertyData';
 
 interface PropertyGridProps {
-  properties: PropertyData[];
-  loading?: boolean;
-  error?: string;
+  showPortfolioMetrics?: boolean;
+  onPropertySelect?: (property: PropertyData) => void;
 }
 
 type SortField = 'value' | 'rent' | 'roi' | 'acquisitionDate' | 'address';
@@ -24,10 +25,29 @@ type FilterType = 'all' | 'Residential' | 'Commercial' | 'Industrial' | 'Mixed-U
 type ViewMode = 'grid' | 'list';
 
 export const PropertyGrid: React.FC<PropertyGridProps> = ({
-  properties,
-  loading = false,
-  error,
+  showPortfolioMetrics = true,
+  onPropertySelect,
 }) => {
+  // Try to use real contract data first, fallback to mock data
+  const realData = useRealPropertyData();
+  const mockData = usePropertyData();
+  
+  // Use real data if available and has properties, otherwise use mock data
+  const useRealData = realData.hasRealData && !realData.shouldUseMockData;
+  
+  const { 
+    properties, 
+    portfolioMetrics, 
+    isLoading, 
+    error, 
+    refreshProperties, 
+    lastRefresh,
+    hasProperties,
+    activeProperties,
+    pendingProperties,
+    underReviewProperties 
+  } = useRealData ? realData : mockData;
+
   const [searchTerm, setSearchTerm] = useState('');
   const [sortField, setSortField] = useState<SortField>('value');
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc');
@@ -35,6 +55,7 @@ export const PropertyGrid: React.FC<PropertyGridProps> = ({
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [selectedProperty, setSelectedProperty] = useState<PropertyData | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const filteredAndSortedProperties = useMemo(() => {
     let filtered = properties;
@@ -101,11 +122,30 @@ export const PropertyGrid: React.FC<PropertyGridProps> = ({
   const handlePropertyClick = (property: PropertyData) => {
     setSelectedProperty(property);
     setIsModalOpen(true);
+    onPropertySelect?.(property);
   };
 
   const handleModalClose = () => {
     setIsModalOpen(false);
     setSelectedProperty(null);
+  };
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await refreshProperties();
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
   };
 
   const handleSort = (field: SortField) => {
@@ -123,7 +163,7 @@ export const PropertyGrid: React.FC<PropertyGridProps> = ({
     return (
       <div className="text-center py-12">
         <p className="text-red-600 mb-4">{error}</p>
-        <Button onClick={() => window.location.reload()}>
+        <Button onClick={handleRefresh}>
           Retry
         </Button>
       </div>
@@ -132,6 +172,103 @@ export const PropertyGrid: React.FC<PropertyGridProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* Portfolio Metrics */}
+      {showPortfolioMetrics && hasProperties && (
+        <div className="bg-white rounded-lg border border-gray-200 p-6">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-2">
+              <BarChart3 size={20} className="text-emerald-600" />
+              <h2 className="text-lg font-semibold text-gray-900">Portfolio Overview</h2>
+            </div>
+            <div className="text-xs text-gray-500">
+              Last updated: {lastRefresh.toLocaleTimeString()}
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="text-center lg:text-left">
+              <p className="text-2xl font-bold text-gray-900">
+                {formatCurrency(portfolioMetrics.totalValue)}
+              </p>
+              <p className="text-sm text-gray-600">Total Portfolio Value</p>
+              <p className="text-xs text-emerald-600 mt-1">
+                +{formatCurrency(portfolioMetrics.totalAppreciation)} appreciation
+              </p>
+            </div>
+            
+            <div className="text-center lg:text-left">
+              <p className="text-2xl font-bold text-gray-900">
+                {formatCurrency(portfolioMetrics.totalMonthlyRent)}
+              </p>
+              <p className="text-sm text-gray-600">Monthly Rental Income</p>
+              <p className="text-xs text-blue-600 mt-1">
+                {formatCurrency(portfolioMetrics.totalMonthlyRent * 12)}/year
+              </p>
+            </div>
+            
+            <div className="text-center lg:text-left">
+              <p className="text-2xl font-bold text-gray-900">
+                {portfolioMetrics.averageROI.toFixed(2)}%
+              </p>
+              <p className="text-sm text-gray-600">Average ROI</p>
+              <p className="text-xs text-gray-500 mt-1">
+                {portfolioMetrics.averageConfidenceScore.toFixed(0)}% avg confidence
+              </p>
+            </div>
+            
+            <div className="text-center lg:text-left">
+              <p className="text-2xl font-bold text-gray-900">
+                {properties.length}
+              </p>
+              <p className="text-sm text-gray-600">Total Properties</p>
+              <div className="flex justify-center lg:justify-start space-x-2 mt-1">
+                <Badge variant="success" size="sm">{activeProperties} Active</Badge>
+                {pendingProperties > 0 && (
+                  <Badge variant="warning" size="sm">{pendingProperties} Pending</Badge>
+                )}
+                {underReviewProperties > 0 && (
+                  <Badge variant="info" size="sm">{underReviewProperties} Review</Badge>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Header with Refresh */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Property Portfolio</h1>
+          <p className="text-gray-600">
+            Manage and monitor your real estate investments
+          </p>
+          <div className="flex items-center space-x-2 mt-1">
+            <Badge variant={useRealData ? 'success' : 'info'} size="sm">
+              {useRealData ? '🔗 Live Contract Data' : '📋 Demo Data'}
+            </Badge>
+            {useRealData && (
+              <span className="text-xs text-gray-500">
+                {realData.totalProperties} properties on-chain
+              </span>
+            )}
+          </div>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+          leftIcon={
+            <RefreshCw 
+              size={16} 
+              className={isRefreshing ? 'animate-spin' : ''} 
+            />
+          }
+        >
+          {isRefreshing ? 'Refreshing...' : 'Refresh'}
+        </Button>
+      </div>
+
       {/* Search and Filters */}
       <div className="flex flex-col lg:flex-row gap-4">
         {/* Search */}
@@ -222,11 +359,16 @@ export const PropertyGrid: React.FC<PropertyGridProps> = ({
       </div>
 
       {/* Property Grid/List */}
-      <LoadingState loading={loading}>
-        {filteredAndSortedProperties.length === 0 ? (
+      <LoadingState loading={isLoading && properties.length === 0}>
+        {filteredAndSortedProperties.length === 0 && !isLoading ? (
           <div className="text-center py-12">
-            <p className="text-gray-500 mb-4">No properties found matching your criteria.</p>
-            {(searchTerm || filterType !== 'all') && (
+            <p className="text-gray-500 mb-4">
+              {properties.length === 0 
+                ? "No properties in portfolio yet. Start by creating acquisition proposals!"
+                : "No properties found matching your criteria."
+              }
+            </p>
+            {(searchTerm || filterType !== 'all') && properties.length > 0 && (
               <Button
                 variant="outline"
                 onClick={() => {
@@ -256,7 +398,7 @@ export const PropertyGrid: React.FC<PropertyGridProps> = ({
       </LoadingState>
 
       {/* Loading skeleton */}
-      {loading && (
+      {isLoading && properties.length === 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[...Array(6)].map((_, i) => (
             <SkeletonCard key={i} />

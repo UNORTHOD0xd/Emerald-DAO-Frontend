@@ -3,4 +3,3 @@ export { PropertyDetailsModal } from './PropertyDetailsModal';
 export { PropertyGrid } from './PropertyGrid';
 export { PropertyAcquisitionForm } from './PropertyAcquisitionForm';
 export { ChainlinkPriceDisplay } from './ChainlinkPriceDisplay';
-export type { PropertyData } from './PropertyCard';

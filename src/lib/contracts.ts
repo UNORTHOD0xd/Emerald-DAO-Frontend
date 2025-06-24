@@ -214,9 +214,21 @@ export const EMERALD_TOKEN_ABI = [
   }
 ] as const;
 
-// Simplified DAO Governance ABI
+// Enhanced DAO Governance ABI
 export const EMERALD_DAO_ABI = [
-  // Basic governance functions
+  // Proposal creation and management
+  {
+    "inputs": [
+      {"name": "targets", "type": "address[]"},
+      {"name": "values", "type": "uint256[]"},
+      {"name": "calldatas", "type": "bytes[]"},
+      {"name": "description", "type": "string"}
+    ],
+    "name": "propose",
+    "outputs": [{"name": "", "type": "uint256"}],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
   {
     "inputs": [{"name": "proposalId", "type": "uint256"}],
     "name": "state",
@@ -225,12 +237,64 @@ export const EMERALD_DAO_ABI = [
     "type": "function"
   },
   {
+    "inputs": [{"name": "proposalId", "type": "uint256"}],
+    "name": "proposalVotes",
+    "outputs": [
+      {"name": "againstVotes", "type": "uint256"},
+      {"name": "forVotes", "type": "uint256"},
+      {"name": "abstainVotes", "type": "uint256"}
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{"name": "proposalId", "type": "uint256"}],
+    "name": "proposalSnapshot",
+    "outputs": [{"name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{"name": "proposalId", "type": "uint256"}],
+    "name": "proposalDeadline",
+    "outputs": [{"name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{"name": "proposalId", "type": "uint256"}],
+    "name": "proposalProposer",
+    "outputs": [{"name": "", "type": "address"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  // Voting functions
+  {
     "inputs": [{"name": "proposalId", "type": "uint256"}, {"name": "support", "type": "uint8"}],
     "name": "castVote",
     "outputs": [{"name": "", "type": "uint256"}],
     "stateMutability": "nonpayable",
     "type": "function"
   },
+  {
+    "inputs": [
+      {"name": "proposalId", "type": "uint256"}, 
+      {"name": "support", "type": "uint8"}, 
+      {"name": "reason", "type": "string"}
+    ],
+    "name": "castVoteWithReason",
+    "outputs": [{"name": "", "type": "uint256"}],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [{"name": "proposalId", "type": "uint256"}, {"name": "account", "type": "address"}],
+    "name": "hasVoted",
+    "outputs": [{"name": "", "type": "bool"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  // Governance parameters
   {
     "inputs": [],
     "name": "votingDelay",
@@ -244,6 +308,64 @@ export const EMERALD_DAO_ABI = [
     "outputs": [{"name": "", "type": "uint256"}],
     "stateMutability": "view",
     "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "proposalThreshold",
+    "outputs": [{"name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{"name": "timepoint", "type": "uint256"}],
+    "name": "quorum",
+    "outputs": [{"name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  // Proposal counting and querying
+  {
+    "inputs": [],
+    "name": "getActiveProposals",
+    "outputs": [{"name": "", "type": "uint256[]"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{"name": "account", "type": "address"}],
+    "name": "getProposalsByAccount",
+    "outputs": [{"name": "", "type": "uint256[]"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  // Events
+  {
+    "anonymous": false,
+    "inputs": [
+      {"indexed": false, "name": "proposalId", "type": "uint256"},
+      {"indexed": true, "name": "proposer", "type": "address"},
+      {"indexed": false, "name": "targets", "type": "address[]"},
+      {"indexed": false, "name": "values", "type": "uint256[]"},
+      {"indexed": false, "name": "signatures", "type": "string[]"},
+      {"indexed": false, "name": "calldatas", "type": "bytes[]"},
+      {"indexed": false, "name": "startBlock", "type": "uint256"},
+      {"indexed": false, "name": "endBlock", "type": "uint256"},
+      {"indexed": false, "name": "description", "type": "string"}
+    ],
+    "name": "ProposalCreated",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {"indexed": true, "name": "voter", "type": "address"},
+      {"indexed": false, "name": "proposalId", "type": "uint256"},
+      {"indexed": false, "name": "support", "type": "uint8"},
+      {"indexed": false, "name": "weight", "type": "uint256"},
+      {"indexed": false, "name": "reason", "type": "string"}
+    ],
+    "name": "VoteCast",
+    "type": "event"
   }
 ] as const;
 
@@ -310,9 +432,9 @@ export const EMERALD_VAULT_ABI = [
   }
 ] as const;
 
-// PropertyFactory ABI
+// PropertyFactory ABI (Enhanced for NFT functionality)
 export const PROPERTY_FACTORY_ABI = [
-  // View Functions
+  // ERC721 Standard Functions
   {
     "inputs": [],
     "name": "totalSupply",
@@ -326,6 +448,90 @@ export const PROPERTY_FACTORY_ABI = [
     "outputs": [{"name": "", "type": "uint256"}],
     "stateMutability": "view",
     "type": "function"
+  },
+  {
+    "inputs": [{"name": "tokenId", "type": "uint256"}],
+    "name": "ownerOf",
+    "outputs": [{"name": "", "type": "address"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{"name": "tokenId", "type": "uint256"}],
+    "name": "tokenURI",
+    "outputs": [{"name": "", "type": "string"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{"name": "owner", "type": "address"}],
+    "name": "balanceOf",
+    "outputs": [{"name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{"name": "owner", "type": "address"}, {"name": "index", "type": "uint256"}],
+    "name": "tokenOfOwnerByIndex",
+    "outputs": [{"name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{"name": "index", "type": "uint256"}],
+    "name": "tokenByIndex",
+    "outputs": [{"name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  // Property-specific functions
+  {
+    "inputs": [{"name": "tokenId", "type": "uint256"}],
+    "name": "getPropertyDetails",
+    "outputs": [
+      {"name": "acquisitionPrice", "type": "uint256"},
+      {"name": "acquisitionDate", "type": "uint256"},
+      {"name": "propertyType", "type": "string"},
+      {"name": "isActive", "type": "bool"}
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{"name": "tokenId", "type": "uint256"}],
+    "name": "getPropertyMetadata",
+    "outputs": [
+      {"name": "propertyAddress", "type": "string"},
+      {"name": "city", "type": "string"},
+      {"name": "state", "type": "string"},
+      {"name": "zipCode", "type": "string"},
+      {"name": "bedrooms", "type": "uint8"},
+      {"name": "bathrooms", "type": "uint8"},
+      {"name": "sqft", "type": "uint256"}
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  // Events
+  {
+    "anonymous": false,
+    "inputs": [
+      {"indexed": true, "name": "from", "type": "address"},
+      {"indexed": true, "name": "to", "type": "address"},
+      {"indexed": true, "name": "tokenId", "type": "uint256"}
+    ],
+    "name": "Transfer",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {"indexed": true, "name": "tokenId", "type": "uint256"},
+      {"indexed": false, "name": "propertyAddress", "type": "string"},
+      {"indexed": false, "name": "acquisitionPrice", "type": "uint256"}
+    ],
+    "name": "PropertyMinted",
+    "type": "event"
   }
 ] as const;
 

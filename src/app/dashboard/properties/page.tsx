@@ -1,13 +1,21 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Building2, Plus, Activity } from 'lucide-react';
 import { Button, Card, CardContent } from '@/components/ui';
-import { ChainlinkPriceDisplay } from '@/components/property';
+import { ChainlinkPriceDisplay, PropertyGrid } from '@/components/property';
 import { useEmeraldDAO } from '@/hooks/useEmeraldDAO';
+import { PropertyData } from '@/hooks/usePropertyData';
 
 export default function PropertiesPage() {
   const { totalProperties, isDAOMember } = useEmeraldDAO();
+  const [, setSelectedProperty] = useState<PropertyData | null>(null);
+  
+  const handlePropertySelect = (property: PropertyData) => {
+    setSelectedProperty(property);
+    // Future: Could open a detailed modal or navigate to property details
+    console.log('Selected property:', property);
+  };
 
   return (
     <div className="space-y-6">
@@ -87,14 +95,11 @@ export default function PropertiesPage() {
         </div>
       </div>
 
-      {/* Coming Soon */}
-      <div className="text-center py-8">
-        <Building2 size={48} className="mx-auto text-gray-400 mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 mb-2">Full Property Portfolio Coming Soon</h3>
-        <p className="text-gray-600">
-          Complete property management interface with detailed analytics and performance tracking.
-        </p>
-      </div>
+      {/* Property Portfolio */}
+      <PropertyGrid 
+        showPortfolioMetrics={true}
+        onPropertySelect={handlePropertySelect}
+      />
     </div>
   );
 }

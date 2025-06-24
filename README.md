@@ -4,11 +4,41 @@
 
 > **Fractionalize property ownership via blockchain technology**
 
-Emerald DAO is a sophisticated decentralized autonomous organization that enables fractional ownership of real estate through blockchain tokenization. Built on Ethereum Sepolia testnet, it combines property investment, governance voting, and treasury management into a unified platform.
+## ⚠️ **EDUCATIONAL PROJECT DISCLAIMER**
+
+**🚨 NOT FOR PRODUCTION USE 🚨**
+
+This frontend application is **exclusively designed for educational and learning purposes**. It was created to demonstrate and explore modern Web3 development technologies including:
+- React 19 & Next.js 15 with App Router
+- TypeScript for type-safe blockchain interactions
+- Wagmi + Viem for Ethereum integration
+- Chainlink oracle technology
+- DAO governance patterns
+- DeFi treasury management concepts
+
+**This project is NOT production-ready and should NEVER be used with real funds or in live environments.**
+
+### Key Limitations:
+- ❌ **No security audits** have been performed on smart contracts
+- ❌ **No production testing** or stress testing completed
+- ❌ **Mock data** is used extensively for demonstration
+- ❌ **Educational code patterns** may not follow production best practices
+- ❌ **Testnet only** - deployed on Sepolia for learning purposes
+
+**Use this project solely for:**
+- ✅ Learning Web3 development concepts
+- ✅ Understanding DAO governance mechanisms  
+- ✅ Exploring Chainlink oracle integration
+- ✅ Studying modern React/TypeScript patterns
+- ✅ Educational blockchain interaction examples
+
+---
 
 ## 🌟 Platform Overview
 
-**Emerald DAO** transforms traditional real estate investment by:
+**Emerald DAO** is an educational demonstration that showcases how to transform traditional real estate investment through blockchain technology. Built on Ethereum Sepolia testnet, it combines property investment, governance voting, and treasury management concepts into a unified learning platform.
+
+**Key Educational Concepts Demonstrated:**
 - **Tokenizing Properties**: Convert real estate into tradeable digital tokens
 - **Democratic Governance**: ERLD token holders vote on property acquisitions and DAO decisions  
 - **Automated Valuations**: Chainlink oracle integration for reliable property pricing
@@ -22,12 +52,22 @@ Emerald DAO is a sophisticated decentralized autonomous organization that enable
 
 ## 🏗️ Key Features
 
+### 🔗 **Chainlink Oracle Integration**
+- **Real-Time Property Valuations**: Live property value assessment using Chainlink oracles with multiple data source aggregation
+- **Confidence Score System**: Statistical reliability metrics for each valuation with 70-100% confidence ratings
+- **Historical Price Tracking**: Time-series property value data with oracle-powered trend analysis
+- **Market Data Feeds**: Integration with real estate data providers for comprehensive property insights
+- **Automated Valuation Updates**: Continuous property assessment with configurable refresh intervals
+- **Oracle Data Visualization**: Professional charts displaying valuation history, confidence intervals, and market comparisons
+- **Fallback Mechanisms**: Graceful degradation to mock data when oracle feeds are unavailable
+- **Multi-Property Support**: Batch oracle queries for efficient portfolio-wide valuations
+
 ### 🏠 **Property Management System**
-- **Real Estate Portfolio**: Tokenized property investments with detailed analytics
-- **Chainlink Oracle Integration**: Real-time property valuations with confidence scores
-- **Property Acquisition Workflow**: Proposal-based system for new property investments
-- **ROI Tracking**: Comprehensive performance monitoring and returns analysis
-- **Due Diligence Tools**: Detailed property information and market analysis
+- **Real Estate Portfolio**: Tokenized property investments with detailed analytics and NFT-based ownership
+- **Property Acquisition Workflow**: Proposal-based system for new property investments with community governance
+- **ROI Tracking**: Comprehensive performance monitoring and returns analysis with yield calculations
+- **Due Diligence Tools**: Detailed property information and market analysis with Chainlink-powered valuations
+- **Portfolio Analytics**: Real-time metrics, appreciation tracking, and diversification insights
 
 ### 🗳️ **Governance & Voting**
 - **ERLD Token Voting**: Proportional voting power based on token holdings
@@ -299,19 +339,23 @@ npm run dev          # http://localhost:3000
 
 ## 🔒 Security Considerations
 
-### **Access Control**
+> **⚠️ EDUCATIONAL DISCLAIMER: These security patterns are demonstrated for learning purposes only. This application has NOT been audited and should NEVER be used in production environments or with real funds.**
+
+### **Educational Security Patterns Demonstrated**
+
+#### **Access Control Concepts**
 - **Token Gating**: All sensitive operations require ERLD tokens
 - **Route Protection**: Dashboard routes automatically verify token ownership
 - **Real-time Verification**: Continuous balance monitoring
 - **Graceful Degradation**: Clear messaging for insufficient tokens
 
-### **Smart Contract Security**
-- **Audited Contracts**: Professional security reviews
-- **Spending Limits**: Automated treasury controls
-- **Emergency Mechanisms**: Circuit breakers and pause functionality
-- **Multi-signature Requirements**: Community governance for major decisions
+#### **Smart Contract Security Concepts** ⚠️ *Educational Only*
+- **Contract Patterns**: Demonstrates security design patterns (NOT audited)
+- **Spending Limits**: Educational implementation of treasury controls
+- **Emergency Mechanisms**: Learning examples of circuit breakers and pause functionality
+- **Governance Patterns**: Educational examples of community decision-making
 
-### **Frontend Security**
+#### **Frontend Security Concepts**
 - **No Private Keys**: Client-side wallet integration only
 - **Input Validation**: All user inputs sanitized
 - **HTTPS Only**: Secure transmission requirements
@@ -352,8 +396,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ### **Getting Help**
 - **Documentation**: Check this README and inline code comments
 - **Issues**: Report bugs via GitHub Issues
-- **Discord**: Join our community Discord server
-- **Twitter**: Follow [@EmeraldDAO](https://twitter.com/EmeraldDAO) for updates
+- **Discord**: Join our community Discord server //Pending
+- **Twitter**: Follow [@EmeraldDAO](https://twitter.com/EmeraldDAO) for updates //Pending
 
 ### **Common Issues**
 - **Token Gating**: Ensure you have minimum 0.0001 ERLD tokens
@@ -363,6 +407,14 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Built with ❤️ by the Emerald DAO community**
+## ⚠️ **FINAL REMINDER**
 
-*Democratizing real estate investment through blockchain technology*
+**This is an educational project built for learning Web3 development concepts. DO NOT use in production or with real funds.**
+
+---
+
+**Built with ❤️ for educational purposes**
+
+*Exploring Web3 development through blockchain technology*
+
+**📚 Educational Focus:** *This project demonstrates modern Web3 development patterns, DAO governance concepts, Chainlink oracle integration, and DeFi treasury management for learning purposes only.*

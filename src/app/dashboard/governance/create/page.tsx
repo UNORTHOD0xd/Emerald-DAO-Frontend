@@ -6,6 +6,7 @@ import { ArrowLeft, Plus, FileText, DollarSign, Settings, AlertTriangle } from '
 import { useRouter } from 'next/navigation';
 import { Button, Card, CardContent, Input } from '@/components/ui';
 import { useEmeraldDAO } from '@/hooks/useEmeraldDAO';
+import { useGovernanceActions, ProposalFormData } from '@/hooks/useGovernanceActions';
 
 interface ProposalTemplate {
   id: string;
@@ -88,9 +89,11 @@ const PROPOSAL_TEMPLATES: ProposalTemplate[] = [
 export default function CreateProposalPage() {
   const router = useRouter();
   const { canVote, isDAOMember } = useEmeraldDAO();
+  const { createProposal, isCreatingProposal } = useGovernanceActions();
   const [selectedTemplate, setSelectedTemplate] = useState<ProposalTemplate | null>(null);
   const [formData, setFormData] = useState<Record<string, string>>({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
 
   const handleTemplateSelect = (template: ProposalTemplate) => {
     setSelectedTemplate(template);
@@ -113,20 +116,45 @@ export default function CreateProposalPage() {
     e.preventDefault();
     if (!selectedTemplate) return;
 
-    setIsSubmitting(true);
+    setSubmitError(null);
+    setSubmitSuccess(false);
+
     try {
-      // TODO: Implement actual proposal creation
-      console.log('Creating proposal:', { template: selectedTemplate.id, data: formData });
-      
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Navigate back to governance page
-      router.push('/dashboard/governance');
+      // Map template ID to proposal type
+      const proposalTypeMap = {
+        'property': 'Property Acquisition' as const,
+        'treasury': 'Treasury Management' as const,
+        'governance': 'Governance' as const,
+        'emergency': 'Emergency' as const,
+      };
+
+      const proposalType = proposalTypeMap[selectedTemplate.id as keyof typeof proposalTypeMap] || 'Other' as const;
+
+      // Create proposal data
+      const proposalData: ProposalFormData = {
+        title: formData.title || selectedTemplate.name,
+        description: formData.description || '',
+        proposalType,
+        targets: [],
+        values: [],
+        calldatas: [],
+        ...formData, // Include all form data for template-specific fields
+      };
+
+      const result = await createProposal(proposalData);
+
+      if (result.success) {
+        setSubmitSuccess(true);
+        // Show success message briefly, then navigate
+        setTimeout(() => {
+          router.push('/dashboard/governance');
+        }, 2000);
+      } else {
+        setSubmitError(result.error || 'Failed to create proposal');
+      }
     } catch (error) {
       console.error('Failed to create proposal:', error);
-    } finally {
-      setIsSubmitting(false);
+      setSubmitError(error instanceof Error ? error.message : 'Failed to create proposal');
     }
   };
 
@@ -276,6 +304,30 @@ export default function CreateProposalPage() {
             </CardContent>
           </Card>
 
+          {/* Success/Error Messages */}
+          {submitSuccess && (
+            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+              <div className="flex items-center space-x-2">
+                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                <p className="text-green-800 font-medium">
+                  Proposal created successfully! Redirecting to governance page...
+                </p>
+              </div>
+            </div>
+          )}
+
+          {submitError && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="flex items-center space-x-2">
+                <AlertTriangle size={16} className="text-red-600" />
+                <div>
+                  <p className="text-red-800 font-medium">Failed to create proposal</p>
+                  <p className="text-red-600 text-sm">{submitError}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Actions */}
           <div className="flex items-center justify-between">
             <div className="text-sm text-gray-600">
@@ -296,11 +348,11 @@ export default function CreateProposalPage() {
               </Button>
               <Button
                 type="submit"
-                disabled={!isFormValid || isSubmitting}
-                loading={isSubmitting}
+                disabled={!isFormValid || isCreatingProposal}
+                loading={isCreatingProposal}
                 leftIcon={<Plus size={16} />}
               >
-                {isSubmitting ? 'Creating Proposal...' : 'Create Proposal'}
+                {isCreatingProposal ? 'Creating Proposal...' : 'Create Proposal'}
               </Button>
             </div>
           </div>

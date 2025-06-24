@@ -14,7 +14,7 @@ import {
   FileText
 } from 'lucide-react';
 import { Card, CardContent, CardFooter, Button, Badge, ProposalStatusBadge } from '@/components/ui';
-import { useGovernanceVoting } from '@/hooks/useGovernanceVoting';
+import { useGovernanceActions, VOTE_SUPPORT } from '@/hooks/useGovernanceActions';
 
 export interface ProposalData {
   id: string;
@@ -53,7 +53,7 @@ export const ProposalCard: React.FC<ProposalCardProps> = ({
   showActions = true,
   userCanVote = false,
 }) => {
-  const { castVote, isVoting, canVote } = useGovernanceVoting();
+  const { castVote, isVoting } = useGovernanceActions();
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -272,16 +272,18 @@ export const ProposalCard: React.FC<ProposalCardProps> = ({
                 View Details
               </Button>
 
-              {isActive && !hasEnded && canVote && !proposal.userHasVoted && (
+              {isActive && !hasEnded && userCanVote && !proposal.userHasVoted && (
                 <div className="flex space-x-2">
                   <Button 
                     variant="outline" 
                     size="sm"
                     onClick={async (e) => {
                       e.stopPropagation();
-                      const result = await castVote(proposal.proposalId, 'against');
-                      if (result.success) {
+                      try {
+                        await castVote(proposal.proposalId, VOTE_SUPPORT.AGAINST);
                         onVote?.(proposal.proposalId, 'against');
+                      } catch (error) {
+                        console.error('Failed to vote:', error);
                       }
                     }}
                     disabled={isVoting}
@@ -294,9 +296,11 @@ export const ProposalCard: React.FC<ProposalCardProps> = ({
                     size="sm"
                     onClick={async (e) => {
                       e.stopPropagation();
-                      const result = await castVote(proposal.proposalId, 'abstain');
-                      if (result.success) {
+                      try {
+                        await castVote(proposal.proposalId, VOTE_SUPPORT.ABSTAIN);
                         onVote?.(proposal.proposalId, 'abstain');
+                      } catch (error) {
+                        console.error('Failed to vote:', error);
                       }
                     }}
                     disabled={isVoting}
@@ -308,9 +312,11 @@ export const ProposalCard: React.FC<ProposalCardProps> = ({
                     size="sm"
                     onClick={async (e) => {
                       e.stopPropagation();
-                      const result = await castVote(proposal.proposalId, 'for');
-                      if (result.success) {
+                      try {
+                        await castVote(proposal.proposalId, VOTE_SUPPORT.FOR);
                         onVote?.(proposal.proposalId, 'for');
+                      } catch (error) {
+                        console.error('Failed to vote:', error);
                       }
                     }}
                     disabled={isVoting}
