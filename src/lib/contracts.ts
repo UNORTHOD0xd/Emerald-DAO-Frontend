@@ -15,219 +15,447 @@ export const CONTRACT_ADDRESSES = {
 // Get current network addresses (defaulting to Sepolia for development)
 export const CONTRACTS = CONTRACT_ADDRESSES.SEPOLIA;
 
-// Comprehensive EMERALD Token ABI based on your contract
+// Comprehensive EMERALD Token ABI based on contract
 export const EMERALD_TOKEN_ABI = [
   // ERC20 Basic Functions
-  'function balanceOf(address owner) view returns (uint256)',
-  'function totalSupply() view returns (uint256)',
-  'function transfer(address to, uint256 amount) returns (bool)',
-  'function transferFrom(address from, address to, uint256 amount) returns (bool)',
-  'function approve(address spender, uint256 amount) returns (bool)',
-  'function allowance(address owner, address spender) view returns (uint256)',
-  
+  {
+    "inputs": [{"name": "owner", "type": "address"}],
+    "name": "balanceOf",
+    "outputs": [{"name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "totalSupply",
+    "outputs": [{"name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{"name": "to", "type": "address"}, {"name": "amount", "type": "uint256"}],
+    "name": "transfer",
+    "outputs": [{"name": "", "type": "bool"}],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [{"name": "from", "type": "address"}, {"name": "to", "type": "address"}, {"name": "amount", "type": "uint256"}],
+    "name": "transferFrom",
+    "outputs": [{"name": "", "type": "bool"}],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [{"name": "spender", "type": "address"}, {"name": "amount", "type": "uint256"}],
+    "name": "approve",
+    "outputs": [{"name": "", "type": "bool"}],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [{"name": "owner", "type": "address"}, {"name": "spender", "type": "address"}],
+    "name": "allowance",
+    "outputs": [{"name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
   // ERC20Votes Functions (Governance)
-  'function getVotes(address account) view returns (uint256)',
-  'function delegate(address delegatee)',
-  'function delegates(address account) view returns (address)',
-  'function getPastVotes(address account, uint256 timepoint) view returns (uint256)',
-  'function getPastTotalSupply(uint256 timepoint) view returns (uint256)',
-  
+  {
+    "inputs": [{"name": "account", "type": "address"}],
+    "name": "getVotes",
+    "outputs": [{"name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{"name": "delegatee", "type": "address"}],
+    "name": "delegate",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [{"name": "account", "type": "address"}],
+    "name": "delegates",
+    "outputs": [{"name": "", "type": "address"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{"name": "account", "type": "address"}, {"name": "timepoint", "type": "uint256"}],
+    "name": "getPastVotes",
+    "outputs": [{"name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{"name": "timepoint", "type": "uint256"}],
+    "name": "getPastTotalSupply",
+    "outputs": [{"name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
   // EMERALD Specific Functions
-  'function burn(uint256 amount)',
-  'function burnFrom(address from, uint256 amount)',
-  'function maxSupply() view returns (uint256)',
-  'function circulatingSupply() view returns (uint256)',
-  'function totalBurned() view returns (uint256)',
-  
+  {
+    "inputs": [{"name": "amount", "type": "uint256"}],
+    "name": "burn",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [{"name": "from", "type": "address"}, {"name": "amount", "type": "uint256"}],
+    "name": "burnFrom",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "maxSupply",
+    "outputs": [{"name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "circulatingSupply",
+    "outputs": [{"name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "totalBurned",
+    "outputs": [{"name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
   // ERC20Permit (Gasless transactions)
-  'function permit(address owner, address spender, uint256 value, uint256 deadline, uint8 v, bytes32 r, bytes32 s)',
-  'function nonces(address owner) view returns (uint256)',
-  'function DOMAIN_SEPARATOR() view returns (bytes32)',
-  
+  {
+    "inputs": [
+      {"name": "owner", "type": "address"},
+      {"name": "spender", "type": "address"},
+      {"name": "value", "type": "uint256"},
+      {"name": "deadline", "type": "uint256"},
+      {"name": "v", "type": "uint8"},
+      {"name": "r", "type": "bytes32"},
+      {"name": "s", "type": "bytes32"}
+    ],
+    "name": "permit",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [{"name": "owner", "type": "address"}],
+    "name": "nonces",
+    "outputs": [{"name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "DOMAIN_SEPARATOR",
+    "outputs": [{"name": "", "type": "bytes32"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
   // Events
-  'event Transfer(address indexed from, address indexed to, uint256 value)',
-  'event Approval(address indexed owner, address indexed spender, uint256 value)',
-  'event DelegateChanged(address indexed delegator, address indexed fromDelegate, address indexed toDelegate)',
-  'event DelegateVotesChanged(address indexed delegate, uint256 previousBalance, uint256 newBalance)',
-  'event TokensBurned(address indexed from, uint256 amount)'
+  {
+    "anonymous": false,
+    "inputs": [
+      {"indexed": true, "name": "from", "type": "address"},
+      {"indexed": true, "name": "to", "type": "address"},
+      {"indexed": false, "name": "value", "type": "uint256"}
+    ],
+    "name": "Transfer",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {"indexed": true, "name": "owner", "type": "address"},
+      {"indexed": true, "name": "spender", "type": "address"},
+      {"indexed": false, "name": "value", "type": "uint256"}
+    ],
+    "name": "Approval",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {"indexed": true, "name": "delegator", "type": "address"},
+      {"indexed": true, "name": "fromDelegate", "type": "address"},
+      {"indexed": true, "name": "toDelegate", "type": "address"}
+    ],
+    "name": "DelegateChanged",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {"indexed": true, "name": "delegate", "type": "address"},
+      {"indexed": false, "name": "previousBalance", "type": "uint256"},
+      {"indexed": false, "name": "newBalance", "type": "uint256"}
+    ],
+    "name": "DelegateVotesChanged",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {"indexed": true, "name": "from", "type": "address"},
+      {"indexed": false, "name": "amount", "type": "uint256"}
+    ],
+    "name": "TokensBurned",
+    "type": "event"
+  }
 ] as const;
 
-// EmeraldDAO Governance ABI
+// Simplified DAO Governance ABI
 export const EMERALD_DAO_ABI = [
-  // Governor Core Functions
-  'function propose(address[] targets, uint256[] values, bytes[] calldatas, string description) returns (uint256)',
-  'function proposeWithMetadata(address[] targets, uint256[] values, bytes[] calldatas, string description, string metadataCID) returns (uint256)',
-  'function castVote(uint256 proposalId, uint8 support) returns (uint256)',
-  'function castVoteWithReason(uint256 proposalId, uint8 support, string reason) returns (uint256)',
-  'function execute(address[] targets, uint256[] values, bytes[] calldatas, bytes32 descriptionHash) payable returns (uint256)',
-  
-  // Proposal State Functions
-  'function state(uint256 proposalId) view returns (uint8)',
-  'function proposalSnapshot(uint256 proposalId) view returns (uint256)',
-  'function proposalDeadline(uint256 proposalId) view returns (uint256)',
-  'function proposalProposer(uint256 proposalId) view returns (address)',
-  'function proposalVotes(uint256 proposalId) view returns (uint256 againstVotes, uint256 forVotes, uint256 abstainVotes)',
-  'function hasVoted(uint256 proposalId, address account) view returns (bool)',
-  'function proposalThreshold() view returns (uint256)',
-  'function quorum(uint256 timepoint) view returns (uint256)',
-  
-  // Enhanced DAO Functions
-  'function getProposalInfo(uint256 proposalId) view returns (uint8 state, uint256 votesFor, uint256 votesAgainst, uint256 votesAbstain, string metadata, bool hasExecution, bool canExecute)',
-  'function getProposalMetadata(uint256 proposalId) view returns (string)',
-  'function getProposalExecution(uint256 proposalId) view returns (address[] targets, uint256[] values, bytes[] calldatas, bytes32 descriptionHash)',
-  'function hasExecutionData(uint256 proposalId) view returns (bool)',
-  'function getProposalCreator(uint256 proposalId) view returns (address)',
-  
-  // Settings
-  'function votingDelay() view returns (uint256)',
-  'function votingPeriod() view returns (uint256)',
-  
-  // Events
-  'event ProposalCreated(uint256 proposalId, address proposer, address[] targets, uint256[] values, string[] signatures, bytes[] calldatas, uint256 startBlock, uint256 endBlock, string description)',
-  'event VoteCast(address indexed voter, uint256 proposalId, uint8 support, uint256 weight, string reason)',
-  'event ProposalExecuted(uint256 proposalId)',
-  'event ProposalMetadataSet(uint256 indexed proposalId, string metadataCID)'
+  // Basic governance functions
+  {
+    "inputs": [{"name": "proposalId", "type": "uint256"}],
+    "name": "state",
+    "outputs": [{"name": "", "type": "uint8"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{"name": "proposalId", "type": "uint256"}, {"name": "support", "type": "uint8"}],
+    "name": "castVote",
+    "outputs": [{"name": "", "type": "uint256"}],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "votingDelay",
+    "outputs": [{"name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "votingPeriod",
+    "outputs": [{"name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  }
 ] as const;
 
 // EmeraldVault Treasury ABI
 export const EMERALD_VAULT_ABI = [
   // Balance Functions
-  'function getETHBalance() view returns (uint256)',
-  'function getERC20Balance(address token) view returns (uint256)',
-  
-  // Treasury Management
-  'function withdrawEther(address payable recipient, uint256 amount, string reason)',
-  'function withdrawERC20(address token, address recipient, uint256 amount, string reason)',
-  'function withdrawERC721(address token, address recipient, uint256 tokenId, string reason)',
-  
+  {
+    "inputs": [],
+    "name": "getETHBalance",
+    "outputs": [{"name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{"name": "token", "type": "address"}],
+    "name": "getERC20Balance",
+    "outputs": [{"name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
   // Health & Limits
-  'function getVaultHealthScore() view returns (uint256)',
-  'function getRemainingDailyLimit() view returns (uint256)',
-  'function getRemainingMonthlyLimit() view returns (uint256)',
-  'function getEmergencySpendingToday() view returns (uint256)',
-  
-  // Security Features
-  'function isLargeWithdrawal(address token, uint256 amount) view returns (bool isLarge, uint256 percentage)',
-  'function getSecurityMetrics() view returns (uint256 totalEmergencyActivations, uint256 circuitBreakersActive, bool emergencyModeActive, uint256 lastSecurityIncident)',
-  
-  // Oracle Configuration
-  'function configureOracle(address token, address oracle, uint8 decimals)',
-  'function getOracleConfig(address token) view returns (tuple)',
-  'function getETHEquivalent(address token, uint256 amount) view returns (uint256)',
-  
+  {
+    "inputs": [],
+    "name": "getVaultHealthScore",
+    "outputs": [{"name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getRemainingDailyLimit",
+    "outputs": [{"name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getRemainingMonthlyLimit",
+    "outputs": [{"name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getEmergencySpendingToday",
+    "outputs": [{"name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
   // Emergency Functions
-  'function emergencyMode() view returns (bool)',
-  'function emergencyActivatedAt() view returns (uint256)',
-  
-  // Events
-  'event EtherReceived(address indexed sender, uint256 amount)',
-  'event EtherWithdrawn(address indexed recipient, uint256 amount, string reason)',
-  'event EmergencyActivated(address indexed activator, string reason)',
-  'event CircuitBreakerTriggered(address indexed token, uint256 oldPrice, uint256 newPrice, uint256 deviation)'
+  {
+    "inputs": [],
+    "name": "emergencyMode",
+    "outputs": [{"name": "", "type": "bool"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "emergencyActivatedAt",
+    "outputs": [{"name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  }
 ] as const;
 
 // PropertyFactory ABI
 export const PROPERTY_FACTORY_ABI = [
-  // Minting Functions
-  'function mintProperty(string propertyIdentifier, string metadataURI) returns (uint256)',
-  'function mintPropertiesBatch(string[] propertyIdentifiers, string[] metadataURIs) returns (uint256[])',
-  
-  // Property Management
-  'function updatePropertyMetadata(uint256 tokenId, string newMetadataURI)',
-  'function burnProperty(uint256 tokenId)',
-  
   // View Functions
-  'function totalSupply() view returns (uint256)',
-  'function maxSupply() view returns (uint256)',
-  'function getRemainingSupply() view returns (uint256)',
-  'function getNextTokenId() view returns (uint256)',
-  'function getPropertyInfo(uint256 tokenId) view returns (string propertyId, string metadataURI, bytes32 dataHash, address owner)',
-  'function isPropertyIdentifierUsed(string propertyIdentifier) view returns (bool)',
-  'function getTokenIdByPropertyIdentifier(string propertyIdentifier) view returns (uint256)',
-  
-  // Treasury Integration
-  'function treasury() view returns (address)',
-  
-  // Events
-  'event PropertyMinted(uint256 indexed tokenId, string indexed propertyIdentifier, string metadataURI, address indexed minter, uint256 timestamp)',
-  'event PropertyBurned(uint256 indexed tokenId, string propertyIdentifier, address indexed burner)',
-  'event PropertyMetadataUpdated(uint256 indexed tokenId, string oldMetadataURI, string newMetadataURI, address indexed updater)'
+  {
+    "inputs": [],
+    "name": "totalSupply",
+    "outputs": [{"name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "maxSupply",
+    "outputs": [{"name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  }
 ] as const;
 
-// Chainlink Oracle ABI
+// Chainlink Oracle ABI for property valuations
 export const CHAINLINK_ORACLE_ABI = [
-  // Oracle Functions
-  'function requestPropertyValuation(string propertyIdentifier, uint8 requestType) returns (bytes32)',
-  'function getPropertyValuation(string propertyIdentifier) view returns (tuple)',
-  'function isValuationCurrent(string propertyIdentifier) view returns (bool)',
-  'function getPropertyValuationInEth(string propertyIdentifier, uint256 ethUsdPrice) view returns (uint256 valueInEth, uint256 rentInEth)',
-  
-  // Oracle Configuration
-  'function setSubscriptionConfig(uint64 subscriptionId, uint32 gasLimit, bytes32 donId)',
-  'function updateSourceCode(string source)',
-  'function setEncryptedSecrets(bytes encryptedSecretsUrls)',
-  
-  // Statistics
-  'function getOracleStats() view returns (uint256 totalProperties, uint256 totalFulfilled, uint256 totalFailed, uint256 successRate)',
-  'function getSourceCodeHash() view returns (bytes32)',
-  
-  // Events
-  'event ValuationRequested(bytes32 indexed requestId, string indexed propertyIdentifier, address indexed requester, uint8 requestType, uint256 timestamp)',
-  'event ValuationFulfilled(bytes32 indexed requestId, string indexed propertyIdentifier, uint256 estimatedValue, uint256 rentEstimate, uint256 confidenceScore, string dataSource)',
-  'event ValuationFailed(bytes32 indexed requestId, string indexed propertyIdentifier, string reason)'
+  {
+    "inputs": [{"name": "propertyId", "type": "string"}],
+    "name": "getPropertyValuation",
+    "outputs": [
+      {"name": "estimatedValue", "type": "uint256"},
+      {"name": "rentEstimate", "type": "uint256"},
+      {"name": "lastUpdated", "type": "uint256"},
+      {"name": "confidenceScore", "type": "uint256"},
+      {"name": "dataSource", "type": "string"},
+      {"name": "isActive", "type": "bool"}
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{"name": "propertyId", "type": "string"}],
+    "name": "requestPropertyValuation",
+    "outputs": [{"name": "requestId", "type": "bytes32"}],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [{"name": "propertyId", "type": "string"}],
+    "name": "getValuationHistory",
+    "outputs": [
+      {"name": "timestamps", "type": "uint256[]"},
+      {"name": "values", "type": "uint256[]"},
+      {"name": "confidenceScores", "type": "uint256[]"}
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  }
 ] as const;
 
-// Property Acquisition ABI
+// Property Acquisition ABI for proposal creation and management
 export const PROPERTY_ACQUISITION_ABI = [
-  // Proposal Functions
-  'function createPropertyProposal(string propertyAddress, string metadataURI, uint256 proposedPrice) payable returns (uint256)',
-  'function requestOracleValuation(uint256 proposalId) returns (bytes32)',
-  'function completeOracleValuation(uint256 proposalId)',
-  'function createDAOProposal(uint256 proposalId, string description) returns (uint256)',
-  'function executePropertyAcquisition(uint256 proposalId) payable',
-  
-  // View Functions
-  'function getProposal(uint256 proposalId) view returns (tuple)',
-  'function getAllProposals() view returns (uint256[])',
-  'function getProposalsByState(uint8 state, uint256 offset, uint256 limit) view returns (uint256[])',
-  'function getProposalCount() view returns (uint256)',
-  'function hasActiveProposal(string propertyAddress) view returns (bool hasProposal, uint256 proposalId, uint8 state)',
-  'function isProposalExpired(uint256 proposalId) view returns (bool expired, string reason)',
-  
-  // Events
-  'event PropertyProposalCreated(uint256 indexed proposalId, address indexed proposer, string propertyAddress, uint256 proposedPrice, string metadataURI, uint256 bondAmount)',
-  'event OracleValuationRequested(uint256 indexed proposalId, bytes32 indexed requestId, string propertyAddress, address indexed requestor)',
-  'event OracleValuationCompleted(uint256 indexed proposalId, uint256 oracleValuation, bool priceValid, uint256 variance, address indexed validator)',
-  'event PropertyAcquired(uint256 indexed proposalId, uint256 indexed tokenId, uint256 acquisitionPrice, address indexed executor)'
+  {
+    "inputs": [
+      {"name": "title", "type": "string"},
+      {"name": "description", "type": "string"},
+      {"name": "propertyAddress", "type": "string"},
+      {"name": "askingPrice", "type": "uint256"},
+      {"name": "expectedRent", "type": "uint256"},
+      {"name": "metadataUri", "type": "string"}
+    ],
+    "name": "createPropertyProposal",
+    "outputs": [{"name": "proposalId", "type": "uint256"}],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [{"name": "proposalId", "type": "uint256"}],
+    "name": "getPropertyProposal",
+    "outputs": [
+      {"name": "title", "type": "string"},
+      {"name": "description", "type": "string"},
+      {"name": "propertyAddress", "type": "string"},
+      {"name": "askingPrice", "type": "uint256"},
+      {"name": "expectedRent", "type": "uint256"},
+      {"name": "proposer", "type": "address"},
+      {"name": "created", "type": "uint256"},
+      {"name": "status", "type": "uint8"}
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getActiveProposals",
+    "outputs": [{"name": "", "type": "uint256[]"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {"name": "proposalId", "type": "uint256"},
+      {"name": "propertyId", "type": "string"}
+    ],
+    "name": "executePropertyAcquisition",
+    "outputs": [{"name": "success", "type": "bool"}],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {"indexed": true, "name": "proposalId", "type": "uint256"},
+      {"indexed": true, "name": "proposer", "type": "address"},
+      {"indexed": false, "name": "propertyAddress", "type": "string"},
+      {"indexed": false, "name": "askingPrice", "type": "uint256"}
+    ],
+    "name": "PropertyProposalCreated",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {"indexed": true, "name": "proposalId", "type": "uint256"},
+      {"indexed": false, "name": "propertyId", "type": "string"},
+      {"indexed": false, "name": "finalPrice", "type": "uint256"}
+    ],
+    "name": "PropertyAcquired",
+    "type": "event"
+  }
 ] as const;
 
-// Keeper ABI
+// Keeper Automation ABI
 export const KEEPER_ABI = [
-  // Automation Functions
-  'function checkUpkeep(bytes calldata) view returns (bool upkeepNeeded, bytes performData)',
-  'function performUpkeep(bytes calldata performData)',
-  'function addProposalToQueue(uint256 proposalId) returns (bool)',
-  'function isValidKeeper() view returns (bool)',
-  
-  // Queue Management
-  'function getQueuedProposalsCount() view returns (uint256)',
-  'function getQueuedProposals() view returns (uint256[] proposalIds, uint8[] priorities, uint256[] queuedTimes, uint256[] attemptCounts)',
-  'function isInQueue(uint256 proposalId) view returns (bool)',
-  'function getProposalQueuePosition(uint256 proposalId) view returns (uint256 position)',
-  
-  // Health Monitoring
-  'function getKeeperHealth() view returns (bool isHealthy, uint256 queueLength, uint256 successRate, uint256 avgGasUsage, uint256 consecutiveFailures, uint256 lastExecutionTime, bool isPaused)',
-  'function getExecutionMetrics() view returns (tuple)',
-  'function getProposalFailureInfo(uint256 proposalId) view returns (uint256 failureCount, uint256 lastFailure, bool inCooldown, uint256 cooldownEnds)',
-  
-  // Configuration
-  'function gasConfig() view returns (tuple)',
-  'function emergencyPaused() view returns (bool)',
-  
-  // Events
-  'event ProposalAddedToQueue(uint256 indexed proposalId, uint8 priority, uint256 queuePosition, uint256 queueLength)',
-  'event ProposalExecuted(uint256 indexed proposalId, uint256 queueLength, uint256 gasUsed, uint256 attemptCount)',
-  'event ProposalExecutionFailed(uint256 indexed proposalId, string reason, uint256 attemptCount, bool willRetry)'
+  {
+    "inputs": [],
+    "name": "checkUpkeep",
+    "outputs": [
+      {"name": "upkeepNeeded", "type": "bool"},
+      {"name": "performData", "type": "bytes"}
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{"name": "performData", "type": "bytes"}],
+    "name": "performUpkeep",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }
 ] as const;
 
 // Helper function to get contract address by name

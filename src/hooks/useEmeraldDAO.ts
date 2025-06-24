@@ -5,7 +5,18 @@ import { CONTRACT_CONFIG } from '@/lib/contracts';
 import { formatEther } from 'viem';
 
 export function useEmeraldDAO() {
-  const { address, isConnected } = useAccount();
+  const { address, isConnected, chain } = useAccount();
+  
+  // Debug logging in development
+  if (process.env.NODE_ENV === 'development') {
+    console.log('useEmeraldDAO Debug:', {
+      address,
+      isConnected,
+      chain: chain?.name,
+      chainId: chain?.id,
+      tokenAddress: CONTRACT_CONFIG.token.address,
+    });
+  }
 
   // User token balance
   const { data: balance, isLoading: balanceLoading } = useReadContract({

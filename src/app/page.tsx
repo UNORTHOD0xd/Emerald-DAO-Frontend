@@ -1,11 +1,12 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { useAccount } from 'wagmi';
 import { ConnectButton } from '@rainbow-me/rainbowkit';
 import { useEmeraldDAO } from '@/hooks/useEmeraldDAO';
+import { TokenGate } from '@/components/ui';
 
 // TypeScript interfaces
 interface EmeraldLogoProps {
@@ -106,10 +107,11 @@ const EmeraldLogo: React.FC<EmeraldLogoProps> = ({ className = "w-8 h-8" }) => (
 // Header Component with Web3 Integration
 const Header: React.FC = () => {
   const { isConnected } = useAccount();
+  const { isDAOMember, balanceNumber } = useEmeraldDAO();
   const router = useRouter();
 
   const handleDashboardAccess = () => {
-    if (isConnected) {
+    if (isConnected && isDAOMember && balanceNumber > 0) {
       router.push('/dashboard');
     }
   };
@@ -125,7 +127,7 @@ const Header: React.FC = () => {
             </span>
           </div>
           <div className="flex items-center space-x-4">
-            {isConnected && (
+            {isConnected && isDAOMember && balanceNumber > 0 && (
               <button 
                 onClick={handleDashboardAccess}
                 className="text-gray-700 hover:text-gray-900 font-medium transition-colors"
@@ -141,59 +143,98 @@ const Header: React.FC = () => {
   );
 };
 
-// Hero Section with Integrated Functionality
+// Hero Section with Token Gating
 const HeroSection: React.FC = () => {
   const router = useRouter();
   const { isConnected } = useAccount();
-  const { isDAOMember, balance } = useEmeraldDAO();
+  const { isDAOMember, balance, balanceNumber, isLoading } = useEmeraldDAO();
+  const [showTokenGate, setShowTokenGate] = useState(false);
   
   const handleEnterDAO = () => {
-    if (isConnected) {
+    if (isConnected && isDAOMember && balanceNumber >= 0.0001) {
       router.push('/dashboard');
+    } else {
+      setShowTokenGate(true);
     }
-    // If not connected, the CustomConnectButton will handle the connection
+  };
+
+  const handleConnectWallet = () => {
+    // This will be handled by the CustomConnectButton component
+  };
+
+  const handleTokenGateClose = () => {
+    setShowTokenGate(false);
   };
 
   return (
     <section className="pt-32 pb-20 px-6 lg:px-8">
       <div className="max-w-4xl mx-auto text-center">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-        >
-          <h1 className="text-5xl lg:text-7xl font-bold text-black mb-6 leading-tight">
-            Real estate. On-chain.
-          </h1>
-          <p className="text-xl lg:text-2xl text-gray-500 mb-8 font-light leading-relaxed">
-            Fractionalize property ownership via Emerald DAO.
-          </p>
-          
-          {/* Connection Status Display */}
-          {isConnected && (
-            <div className="mb-8 p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
-              <p className="text-emerald-800 font-medium">
-                {isDAOMember ? 
-                  `Welcome back! You hold ${balance} ERLD tokens` : 
-                  'Connected! Acquire ERLD tokens to join the DAO'
+        {!showTokenGate ? (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+          >
+            <h1 className="text-5xl lg:text-7xl font-bold text-black mb-6 leading-tight">
+              Real estate. On-chain.
+            </h1>
+            <p className="text-xl lg:text-2xl text-gray-500 mb-8 font-light leading-relaxed">
+              Fractionalize property ownership via Emerald DAO.
+            </p>
+            
+            {/* Connection Status Display */}
+            {isConnected && (
+              <div className="mb-8 p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
+                <p className="text-emerald-800 font-medium">
+                  {isDAOMember && balanceNumber >= 0.0001 ? 
+                    `Welcome back! You hold ${balance} ERLD tokens` : 
+                    'Connected! Acquire ERLD tokens to join the DAO'
+                  }
+                </p>
+              </div>
+            )}
+            
+            <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+              <button 
+                onClick={handleEnterDAO}
+                className="bg-black text-white px-8 py-3 rounded-full hover:bg-gray-800 transition-colors font-medium"
+              >
+                {isConnected ? 
+                  (isDAOMember && balanceNumber >= 0.0001 ? 'Enter the DAO' : 'Check Token Requirements') : 
+                  'Connect & Enter DAO'
                 }
-              </p>
+              </button>
+              {!isConnected && <CustomConnectButton />}
             </div>
-          )}
-          
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <button 
-              onClick={handleEnterDAO}
-              className="bg-black text-white px-8 py-3 rounded-full hover:bg-gray-800 transition-colors font-medium"
-            >
-              {isConnected ? 
-                (isDAOMember ? 'Enter the DAO' : 'View Dashboard') : 
-                'Connect & Enter DAO'
-              }
-            </button>
-            <CustomConnectButton />
+          </motion.div>
+        ) : (
+          <div className="py-12">
+            <TokenGate
+              isConnected={isConnected}
+              hasTokens={isDAOMember}
+              tokenBalance={balance}
+              minimumBalance={0.0001}
+              onConnectWallet={() => {
+                setShowTokenGate(false);
+                handleConnectWallet();
+              }}
+              onProceed={() => {
+                setShowTokenGate(false);
+                router.push('/dashboard');
+              }}
+              loading={isLoading}
+            />
+            
+            <div className="mt-6">
+              <button
+                onClick={handleTokenGateClose}
+                className="text-gray-600 hover:text-gray-800 transition-colors text-sm"
+              >
+                ← Back to landing page
+              </button>
+            </div>
           </div>
-        </motion.div>
+        )}
       </div>
     </section>
   );
@@ -283,34 +324,33 @@ const StatsSection: React.FC = () => {
   );
 };
 
-// CTA Section with Dynamic Content
+// CTA Section with Token Gating
 const CTASection: React.FC = () => {
   const { isConnected } = useAccount();
-  const { isDAOMember } = useEmeraldDAO();
+  const { isDAOMember, balanceNumber, balance, isLoading } = useEmeraldDAO();
   const router = useRouter();
+  const [showTokenGate, setShowTokenGate] = useState(false);
 
   const handleCTAClick = () => {
-    if (isConnected && isDAOMember) {
+    if (isConnected && isDAOMember && balanceNumber >= 0.0001) {
       router.push('/dashboard');
-    } else if (isConnected) {
-      // Direct to token acquisition or dashboard
-      router.push('/dashboard');
+    } else {
+      setShowTokenGate(true);
     }
-    // If not connected, the user needs to use the Connect Wallet buttons above
   };
 
   const getCtaText = () => {
-    if (isConnected && isDAOMember) {
+    if (isConnected && isDAOMember && balanceNumber >= 0.0001) {
       return 'Access Your Dashboard';
     } else if (isConnected) {
-      return 'Join the DAO';
+      return 'Check Token Requirements';
     } else {
       return 'Connect Wallet Above';
     }
   };
 
   const getDescriptionText = () => {
-    if (isConnected && isDAOMember) {
+    if (isConnected && isDAOMember && balanceNumber >= 0.0001) {
       return 'Access your personalized DAO dashboard and participate in governance decisions.';
     } else if (isConnected) {
       return 'Acquire ERLD tokens to become a member and participate in real estate governance.';
@@ -322,38 +362,64 @@ const CTASection: React.FC = () => {
   return (
     <section className="py-24 px-6 lg:px-8">
       <div className="max-w-4xl mx-auto text-center">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          viewport={{ once: true }}
-        >
-          <h2 className="text-4xl lg:text-5xl font-bold text-black mb-6 leading-tight">
-            {isConnected && isDAOMember ? 
-              'Welcome back, DAO member.' : 
-              'Join Emerald DAO today.'
-            }
-          </h2>
-          <p className="text-lg text-gray-600 mb-12 leading-relaxed font-light max-w-2xl mx-auto">
-            {getDescriptionText()}
-          </p>
-          
-          {isConnected ? (
-            <button 
-              onClick={handleCTAClick}
-              className="bg-black text-white px-8 py-3 rounded-full hover:bg-gray-800 transition-colors font-medium"
-            >
-              {getCtaText()}
-            </button>
-          ) : (
-            <div className="space-y-4">
-              <CustomConnectButton />
-              <p className="text-sm text-gray-500">
-                Connect your wallet to get started
-              </p>
+        {!showTokenGate ? (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+            viewport={{ once: true }}
+          >
+            <h2 className="text-4xl lg:text-5xl font-bold text-black mb-6 leading-tight">
+              {isConnected && isDAOMember && balanceNumber >= 0.0001 ? 
+                'Welcome back, DAO member.' : 
+                'Join Emerald DAO today.'
+              }
+            </h2>
+            <p className="text-lg text-gray-600 mb-12 leading-relaxed font-light max-w-2xl mx-auto">
+              {getDescriptionText()}
+            </p>
+            
+            {isConnected ? (
+              <button 
+                onClick={handleCTAClick}
+                className="bg-black text-white px-8 py-3 rounded-full hover:bg-gray-800 transition-colors font-medium"
+              >
+                {getCtaText()}
+              </button>
+            ) : (
+              <div className="space-y-4">
+                <CustomConnectButton />
+                <p className="text-sm text-gray-500">
+                  Connect your wallet to get started
+                </p>
+              </div>
+            )}
+          </motion.div>
+        ) : (
+          <div className="py-12">
+            <TokenGate
+              isConnected={isConnected}
+              hasTokens={isDAOMember}
+              tokenBalance={balance}
+              minimumBalance={0.0001}
+              onConnectWallet={() => setShowTokenGate(false)}
+              onProceed={() => {
+                setShowTokenGate(false);
+                router.push('/dashboard');
+              }}
+              loading={isLoading}
+            />
+            
+            <div className="mt-6">
+              <button
+                onClick={() => setShowTokenGate(false)}
+                className="text-gray-600 hover:text-gray-800 transition-colors text-sm"
+              >
+                ← Back to landing page
+              </button>
             </div>
-          )}
-        </motion.div>
+          </div>
+        )}
       </div>
     </section>
   );
