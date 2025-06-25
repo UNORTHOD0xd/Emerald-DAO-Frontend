@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { useAccount } from 'wagmi';
@@ -96,9 +97,11 @@ const CustomConnectButton: React.FC = () => {
 // Emerald Diamond Logo Component
 const EmeraldLogo: React.FC<EmeraldLogoProps> = ({ className = "w-8 h-8" }) => (
   <div className={`${className} relative`}>
-    <img 
+    <Image 
       src="/EmeraldDAO.png" 
       alt="Emerald DAO Logo" 
+      width={40}
+      height={40}
       className="w-full h-full object-contain"
     />
   </div>

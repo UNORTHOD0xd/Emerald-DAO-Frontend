@@ -23,6 +23,8 @@ export interface PropertyData {
   lastValuationUpdate: string;
   roiPercentage: number;
   status: 'Active' | 'Pending' | 'Under Review';
+  floorplanUrl?: string;
+  galleryImages?: string[];
 }
 
 // Mock property data for development
@@ -38,7 +40,8 @@ const MOCK_PROPERTIES: PropertyData[] = [
     monthlyRent: 3200,
     acquisitionPrice: 580000,
     acquisitionDate: '2024-01-15',
-    imageUrl: '/images/properties/prop1.jpg',
+    imageUrl: '/images/Austin_TX.webp',
+    galleryImages: ['/images/Austin_TX.webp'],
     metadataURI: 'https://api.emeralddao.com/metadata/1',
     confidenceScore: 92,
     lastValuationUpdate: '2024-06-20',
@@ -56,6 +59,7 @@ const MOCK_PROPERTIES: PropertyData[] = [
     monthlyRent: 8500,
     acquisitionPrice: 1050000,
     acquisitionDate: '2024-02-10',
+    imageUrl: '/images/Denver.webp',
     metadataURI: 'https://api.emeralddao.com/metadata/2',
     confidenceScore: 89,
     lastValuationUpdate: '2024-06-18',
@@ -73,6 +77,9 @@ const MOCK_PROPERTIES: PropertyData[] = [
     monthlyRent: 2400,
     acquisitionPrice: 450000,
     acquisitionDate: '2024-03-05',
+    imageUrl: '/images/Nashville.webp',
+    floorplanUrl: '/images/Nashville_floorplan.png',
+    galleryImages: ['/images/Nashville.webp'],
     metadataURI: 'https://api.emeralddao.com/metadata/3',
     confidenceScore: 85,
     lastValuationUpdate: '2024-06-22',
@@ -90,6 +97,7 @@ const MOCK_PROPERTIES: PropertyData[] = [
     monthlyRent: 5200,
     acquisitionPrice: 780000,
     acquisitionDate: '2024-04-12',
+    imageUrl: '/images/Portland.webp',
     metadataURI: 'https://api.emeralddao.com/metadata/4',
     confidenceScore: 78,
     lastValuationUpdate: '2024-06-19',
@@ -107,6 +115,7 @@ const MOCK_PROPERTIES: PropertyData[] = [
     monthlyRent: 15000,
     acquisitionPrice: 1900000,
     acquisitionDate: '2024-05-20',
+    imageUrl: '/images/Seattle.webp',
     metadataURI: 'https://api.emeralddao.com/metadata/5',
     confidenceScore: 94,
     lastValuationUpdate: '2024-06-21',
@@ -124,6 +133,8 @@ const MOCK_PROPERTIES: PropertyData[] = [
     monthlyRent: 4100,
     acquisitionPrice: 680000,
     acquisitionDate: '2024-06-01',
+    imageUrl: '/images/Miami.webp',
+    galleryImages: ['/images/Miami.webp'],
     metadataURI: 'https://api.emeralddao.com/metadata/6',
     confidenceScore: 91,
     lastValuationUpdate: '2024-06-23',

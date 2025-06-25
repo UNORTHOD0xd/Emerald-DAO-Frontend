@@ -24,8 +24,10 @@ import {
   Badge,
   LoadingSpinner 
 } from '@/components/ui';
+import { ChainlinkPriceDisplay } from '@/components/property/ChainlinkPriceDisplay';
 import { CONTRACT_CONFIG } from '@/lib/contracts';
 import { useEmeraldDAO } from '@/hooks/useEmeraldDAO';
+import { useRealChainlinkData } from '@/hooks/useRealChainlinkData';
 
 interface PropertyFormData {
   address: string;
@@ -44,6 +46,10 @@ interface PropertyFormData {
   inspectionUrl: string;
   appraisalUrl: string;
   photoUrls: string[];
+  // Chainlink oracle data
+  oracleValidation: boolean;
+  estimatedValue: string;
+  priceConfidence: number;
 }
 
 interface PropertyAcquisitionFormProps {
@@ -61,6 +67,10 @@ export const PropertyAcquisitionForm: React.FC<PropertyAcquisitionFormProps> = (
   const { canVote, votingPower } = useEmeraldDAO();
   const [step, setStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Generate a mock property ID for Chainlink oracle demonstration
+  const [mockPropertyId, setMockPropertyId] = useState<string>('');
+  const { valuation, isLoading: isOracleLoading, refetch: refetchOracle } = useRealChainlinkData(mockPropertyId);
   const [formData, setFormData] = useState<PropertyFormData>({
     address: '',
     city: '',
@@ -77,6 +87,9 @@ export const PropertyAcquisitionForm: React.FC<PropertyAcquisitionFormProps> = (
     inspectionUrl: '',
     appraisalUrl: '',
     photoUrls: [],
+    oracleValidation: false,
+    estimatedValue: '',
+    priceConfidence: 0,
   });
 
   // Contract write hook for proposal creation
@@ -105,10 +118,34 @@ export const PropertyAcquisitionForm: React.FC<PropertyAcquisitionFormProps> = (
         inspectionUrl: '',
         appraisalUrl: '',
         photoUrls: [],
+        oracleValidation: false,
+        estimatedValue: '',
+        priceConfidence: 0,
       });
+      setMockPropertyId('');
       setIsSubmitting(false);
     }
   }, [isOpen]);
+
+  // Generate property ID for oracle when location is entered
+  useEffect(() => {
+    if (formData.address && formData.city && formData.state) {
+      const propertyId = `${formData.address}_${formData.city}_${formData.state}`.replace(/\s+/g, '_').toLowerCase();
+      setMockPropertyId(propertyId);
+    }
+  }, [formData.address, formData.city, formData.state]);
+
+  // Update form data when oracle valuation is received
+  useEffect(() => {
+    if (valuation && !isOracleLoading) {
+      setFormData(prev => ({
+        ...prev,
+        oracleValidation: true,
+        estimatedValue: valuation.estimatedValue.toString(),
+        priceConfidence: valuation.confidenceScore,
+      }));
+    }
+  }, [valuation, isOracleLoading]);
 
   // Handle successful transaction
   useEffect(() => {
@@ -153,8 +190,10 @@ export const PropertyAcquisitionForm: React.FC<PropertyAcquisitionFormProps> = (
       case 2:
         return !!(formData.askingPrice && formData.expectedMonthlyRent && formData.sqft > 0);
       case 3:
-        return !!formData.description;
+        return formData.oracleValidation; // Oracle validation required
       case 4:
+        return !!formData.description;
+      case 5:
         return !!(formData.deedUrl && formData.inspectionUrl);
       default:
         return true;
@@ -163,7 +202,7 @@ export const PropertyAcquisitionForm: React.FC<PropertyAcquisitionFormProps> = (
 
   const handleNext = () => {
     if (validateStep(step)) {
-      setStep(prev => Math.min(prev + 1, 5));
+      setStep(prev => Math.min(prev + 1, 6));
     }
   };
 
@@ -180,6 +219,22 @@ export const PropertyAcquisitionForm: React.FC<PropertyAcquisitionFormProps> = (
       return ((annualRent / price) * 100).toFixed(2);
     }
     return '0.00';
+  };
+
+  const getPriceDifferenceAnalysis = () => {
+    const askingPrice = parseFloat(formData.askingPrice) || 0;
+    const oraclePrice = parseFloat(formData.estimatedValue) || 0;
+    
+    if (askingPrice > 0 && oraclePrice > 0) {
+      const difference = ((askingPrice - oraclePrice) / oraclePrice) * 100;
+      return {
+        difference: difference.toFixed(1),
+        isOverpriced: difference > 10,
+        isUnderpriced: difference < -10,
+        isFair: Math.abs(difference) <= 10,
+      };
+    }
+    return null;
   };
 
   const handleSubmit = async () => {
@@ -215,6 +270,13 @@ export const PropertyAcquisitionForm: React.FC<PropertyAcquisitionFormProps> = (
             appraisal: formData.appraisalUrl,
             photos: formData.photoUrls.filter(url => url.trim() !== ''),
           },
+          chainlinkOracle: formData.oracleValidation ? {
+            propertyId: mockPropertyId,
+            estimatedValue: formData.estimatedValue,
+            confidenceScore: formData.priceConfidence,
+            priceAnalysis: getPriceDifferenceAnalysis(),
+            validatedAt: new Date().toISOString(),
+          } : null,
         },
         type: 'property_acquisition',
         createdAt: new Date().toISOString(),
@@ -385,6 +447,107 @@ export const PropertyAcquisitionForm: React.FC<PropertyAcquisitionFormProps> = (
         return (
           <div className="space-y-4">
             <div className="flex items-center space-x-2 mb-4">
+              <DollarSign size={20} className="text-emerald-600" />
+              <h3 className="text-lg font-semibold">Chainlink Oracle Validation</h3>
+            </div>
+            
+            {mockPropertyId && (
+              <div className="mb-6">
+                <ChainlinkPriceDisplay propertyId={mockPropertyId} />
+              </div>
+            )}
+
+            {formData.oracleValidation && (
+              <div className="space-y-4">
+                <Card className="bg-emerald-50 border-emerald-200">
+                  <CardContent className="p-4">
+                    <h4 className="font-semibold text-emerald-800 mb-3">Oracle Valuation Analysis</h4>
+                    
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="text-gray-600">Asking Price:</span>
+                        <div className="font-semibold">${parseInt(formData.askingPrice || '0').toLocaleString()}</div>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Oracle Estimate:</span>
+                        <div className="font-semibold">${parseInt(formData.estimatedValue || '0').toLocaleString()}</div>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Confidence Score:</span>
+                        <div className="font-semibold">{formData.priceConfidence}%</div>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Price Analysis:</span>
+                        {(() => {
+                          const analysis = getPriceDifferenceAnalysis();
+                          if (!analysis) return <div className="text-gray-500">Calculating...</div>;
+                          
+                          let badgeVariant: 'success' | 'warning' | 'error' = 'success';
+                          let badgeText = 'Fair Pricing';
+                          
+                          if (analysis.isOverpriced) {
+                            badgeVariant = 'error';
+                            badgeText = `${analysis.difference}% Overpriced`;
+                          } else if (analysis.isUnderpriced) {
+                            badgeVariant = 'success';
+                            badgeText = `${Math.abs(parseFloat(analysis.difference))}% Underpriced`;
+                          }
+                          
+                          return <Badge variant={badgeVariant}>{badgeText}</Badge>;
+                        })()}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {(() => {
+                  const analysis = getPriceDifferenceAnalysis();
+                  if (analysis?.isOverpriced) {
+                    return (
+                      <div className="bg-red-50 border border-red-200 rounded-md p-3">
+                        <div className="flex items-start space-x-2">
+                          <AlertCircle size={16} className="text-red-600 mt-0.5" />
+                          <div className="text-sm text-red-800">
+                            <p className="font-medium mb-1">Price Alert:</p>
+                            <p>The asking price is significantly higher than the oracle valuation. Consider negotiating the price or providing additional justification for the premium.</p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
+
+                <div className="bg-blue-50 border border-blue-200 rounded-md p-3">
+                  <div className="flex items-start space-x-2">
+                    <Info size={16} className="text-blue-600 mt-0.5" />
+                    <div className="text-sm text-blue-800">
+                      <p className="font-medium mb-1">Oracle Validation Complete</p>
+                      <p>Chainlink oracle data has been integrated into this proposal. This valuation will be included in the governance discussion.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {!formData.oracleValidation && !isOracleLoading && (
+              <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3">
+                <div className="flex items-start space-x-2">
+                  <AlertCircle size={16} className="text-yellow-600 mt-0.5" />
+                  <div className="text-sm text-yellow-800">
+                    <p className="font-medium mb-1">Oracle Validation Required</p>
+                    <p>Please wait for Chainlink oracle validation to complete before proceeding.</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+
+      case 4:
+        return (
+          <div className="space-y-4">
+            <div className="flex items-center space-x-2 mb-4">
               <FileText size={20} className="text-emerald-600" />
               <h3 className="text-lg font-semibold">Property Description</h3>
             </div>
@@ -408,7 +571,7 @@ export const PropertyAcquisitionForm: React.FC<PropertyAcquisitionFormProps> = (
           </div>
         );
 
-      case 4:
+      case 5:
         return (
           <div className="space-y-4">
             <div className="flex items-center space-x-2 mb-4">
@@ -482,7 +645,7 @@ export const PropertyAcquisitionForm: React.FC<PropertyAcquisitionFormProps> = (
           </div>
         );
 
-      case 5:
+      case 6:
         return (
           <div className="space-y-4">
             <div className="flex items-center space-x-2 mb-4">
@@ -518,6 +681,38 @@ export const PropertyAcquisitionForm: React.FC<PropertyAcquisitionFormProps> = (
                     <span className="text-gray-600 font-medium">Est. Annual ROI:</span>
                     <Badge variant="success">{calculateROI()}%</Badge>
                   </div>
+                  {formData.oracleValidation && (
+                    <>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Oracle Valuation:</span>
+                        <span>${parseInt(formData.estimatedValue || '0').toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Oracle Confidence:</span>
+                        <Badge variant="info">{formData.priceConfidence}%</Badge>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600">Price Analysis:</span>
+                        {(() => {
+                          const analysis = getPriceDifferenceAnalysis();
+                          if (!analysis) return <span>-</span>;
+                          
+                          let badgeVariant: 'success' | 'warning' | 'error' = 'success';
+                          let badgeText = 'Fair Pricing';
+                          
+                          if (analysis.isOverpriced) {
+                            badgeVariant = 'error';
+                            badgeText = `${analysis.difference}% Overpriced`;
+                          } else if (analysis.isUnderpriced) {
+                            badgeVariant = 'success';
+                            badgeText = `${Math.abs(parseFloat(analysis.difference))}% Underpriced`;
+                          }
+                          
+                          return <Badge variant={badgeVariant}>{badgeText}</Badge>;
+                        })()}
+                      </div>
+                    </>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -548,9 +743,10 @@ export const PropertyAcquisitionForm: React.FC<PropertyAcquisitionFormProps> = (
     switch (step) {
       case 1: return 'Property Location';
       case 2: return 'Property Details';
-      case 3: return 'Description';
-      case 4: return 'Documents';
-      case 5: return 'Review & Submit';
+      case 3: return 'Oracle Validation';
+      case 4: return 'Description';
+      case 5: return 'Documents';
+      case 6: return 'Review & Submit';
       default: return '';
     }
   };
@@ -562,7 +758,7 @@ export const PropertyAcquisitionForm: React.FC<PropertyAcquisitionFormProps> = (
           <h2 className="text-2xl font-bold text-gray-900">
             Create Property Acquisition Proposal
           </h2>
-          <Badge variant="info">Step {step} of 5</Badge>
+          <Badge variant="info">Step {step} of 6</Badge>
         </div>
 
         {/* Progress Bar */}
@@ -570,6 +766,7 @@ export const PropertyAcquisitionForm: React.FC<PropertyAcquisitionFormProps> = (
           <div className="flex justify-between text-xs text-gray-500 mb-2">
             <span>Location</span>
             <span>Details</span>
+            <span>Oracle</span>
             <span>Description</span>
             <span>Documents</span>
             <span>Review</span>
@@ -577,8 +774,8 @@ export const PropertyAcquisitionForm: React.FC<PropertyAcquisitionFormProps> = (
           <div className="w-full bg-gray-200 rounded-full h-2">
             <motion.div
               className="bg-emerald-600 h-2 rounded-full"
-              initial={{ width: '20%' }}
-              animate={{ width: `${(step / 5) * 100}%` }}
+              initial={{ width: '16.7%' }}
+              animate={{ width: `${(step / 6) * 100}%` }}
               transition={{ duration: 0.3 }}
             />
           </div>
@@ -600,7 +797,7 @@ export const PropertyAcquisitionForm: React.FC<PropertyAcquisitionFormProps> = (
           </div>
           
           <div className="flex space-x-2">
-            {step < 5 ? (
+            {step < 6 ? (
               <Button 
                 onClick={handleNext}
                 disabled={!validateStep(step)}

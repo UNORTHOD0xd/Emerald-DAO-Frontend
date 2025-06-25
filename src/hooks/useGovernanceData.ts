@@ -10,7 +10,20 @@ const SAMPLE_PROPOSALS: ProposalData[] = [
     id: '1',
     proposalId: 1,
     title: 'Acquire Downtown Austin Commercial Property',
-    description: 'Proposal to purchase a 15,000 sq ft commercial building in downtown Austin, Texas. The property is currently generating $45,000/month in rental income with high-quality tenants including tech companies and professional services.',
+    description: `Proposal to purchase a 15,000 sq ft commercial building in downtown Austin, Texas. The property is currently generating $45,000/month in rental income with high-quality tenants including tech companies and professional services.
+
+**Chainlink Oracle Validation:**
+- Oracle Estimated Value: $2,850,000
+- Asking Price: $2,700,000  
+- Price Analysis: 5.3% Underpriced - Excellent Deal!
+- Oracle Confidence Score: 94%
+- Validated: ${new Date().toLocaleDateString()}
+
+**Investment Highlights:**
+- Prime downtown location with high foot traffic
+- Stable tenant base with long-term leases
+- Projected 8.5% annual ROI based on current rental income
+- Oracle valuation confirms asking price is below market value`,
     proposer: '0x742d35Cc6634C0532925a3b8D4e4F7c38f6e1234',
     status: 'Active',
     votesFor: 125000,
@@ -84,7 +97,19 @@ const SAMPLE_PROPOSALS: ProposalData[] = [
     id: '5',
     proposalId: 5,
     title: 'Residential Property Portfolio Expansion - Miami',
-    description: 'Acquire 5 residential rental properties in Miami, FL market. Total investment of $3.2M expected to generate $18,000/month rental income. Properties have been pre-screened and include single-family homes and condos in high-growth areas.',
+    description: `Acquire 5 residential rental properties in Miami, FL market. Total investment of $3.2M expected to generate $18,000/month rental income. Properties have been pre-screened and include single-family homes and condos in high-growth areas.
+
+**Chainlink Oracle Analysis:**
+- Combined Oracle Valuation: $2,890,000
+- Asking Price: $3,200,000
+- Price Analysis: 10.7% Overpriced - Poor Deal
+- Average Confidence Score: 87%
+
+**Community Concerns:**
+- Oracle data suggests properties are overvalued by market standards
+- High asking price relative to rental income potential
+- Miami market showing signs of cooling
+- Better opportunities available in other markets`,
     proposer: '0x742d35Cc6634C0532925a3b8D4e4F7c38f6e1111',
     status: 'Defeated',
     votesFor: 67000,

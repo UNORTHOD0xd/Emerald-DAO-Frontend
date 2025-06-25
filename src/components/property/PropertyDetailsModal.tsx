@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { 
   MapPin, 
   DollarSign, 
@@ -12,7 +13,9 @@ import {
   AlertCircle,
   Building,
   Users,
-  BarChart3
+  BarChart3,
+  Camera,
+  Layout
 } from 'lucide-react';
 import { 
   Modal, 
@@ -56,7 +59,7 @@ export const PropertyDetailsModal: React.FC<PropertyDetailsModalProps> = ({
   isOpen,
   onClose,
 }) => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'financials' | 'history'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'financials' | 'history' | 'gallery'>('overview');
 
   if (!property) return null;
 
@@ -228,6 +231,11 @@ export const PropertyDetailsModal: React.FC<PropertyDetailsModalProps> = ({
             tab="history" 
             label="Valuation History" 
             isActive={activeTab === 'history'} 
+          />
+          <TabButton 
+            tab="gallery" 
+            label="Gallery" 
+            isActive={activeTab === 'gallery'} 
           />
         </div>
 
@@ -430,6 +438,137 @@ export const PropertyDetailsModal: React.FC<PropertyDetailsModalProps> = ({
                 </div>
               </CardContent>
             </Card>
+          )}
+
+          {activeTab === 'gallery' && (
+            <div className="space-y-6">
+              {/* Main Property Image */}
+              {property.imageUrl && (
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center space-x-2">
+                      <Camera size={20} className="text-emerald-600" />
+                      <span>Property Photos</span>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="aspect-video relative overflow-hidden rounded-lg">
+                      <Image
+                        src={property.imageUrl}
+                        alt={`${property.address} - Main View`}
+                        fill
+                        className="object-cover"
+                        sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      />
+                    </div>
+                    <p className="text-sm text-gray-600 mt-2">
+                      Main property view - {property.city}, {property.state}
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Floorplan */}
+              {property.floorplanUrl && (
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center space-x-2">
+                      <Layout size={20} className="text-blue-600" />
+                      <span>Floor Plan</span>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="bg-white p-4 rounded-lg border-2 border-gray-200">
+                      <div className="relative w-full" style={{ aspectRatio: '4/3' }}>
+                        <Image
+                          src={property.floorplanUrl}
+                          alt={`${property.address} - Floor Plan`}
+                          fill
+                          className="object-contain"
+                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                        />
+                      </div>
+                    </div>
+                    <p className="text-sm text-gray-600 mt-2">
+                      Detailed floor plan showing room layouts and dimensions
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Additional Gallery Images */}
+              {property.galleryImages && property.galleryImages.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center space-x-2">
+                      <Camera size={20} className="text-purple-600" />
+                      <span>Additional Photos</span>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {property.galleryImages.map((imageUrl, index) => (
+                        <div key={index} className="aspect-video relative overflow-hidden rounded-lg">
+                          <Image
+                            src={imageUrl}
+                            alt={`${property.address} - Gallery Image ${index + 1}`}
+                            fill
+                            className="object-cover hover:scale-105 transition-transform duration-300"
+                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Property Details with Images */}
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center space-x-2">
+                    <Building size={20} className="text-gray-600" />
+                    <span>Property Highlights</span>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                      <h4 className="font-semibold mb-3">Key Features</h4>
+                      <ul className="space-y-2 text-sm text-gray-600">
+                        <li>• High-quality construction with modern amenities</li>
+                        <li>• Prime location in {property.city} with excellent accessibility</li>
+                        <li>• Professional property management ensuring consistent returns</li>
+                        <li>• Chainlink oracle-verified valuation for transparent pricing</li>
+                        {property.propertyType === 'Residential' && (
+                          <>
+                            <li>• Family-friendly neighborhood with top-rated schools</li>
+                            <li>• Close proximity to shopping and entertainment districts</li>
+                          </>
+                        )}
+                        {property.propertyType === 'Commercial' && (
+                          <>
+                            <li>• High-traffic commercial district location</li>
+                            <li>• Flexible space suitable for various business types</li>
+                          </>
+                        )}
+                      </ul>
+                    </div>
+                    <div>
+                      <h4 className="font-semibold mb-3">Investment Benefits</h4>
+                      <ul className="space-y-2 text-sm text-gray-600">
+                        <li>• Consistent rental income with {property.confidenceScore}% oracle confidence</li>
+                        <li>• Strong appreciation potential in growing market</li>
+                        <li>• Professional DAO management reduces investor burden</li>
+                        <li>• Blockchain-verified ownership and transparent governance</li>
+                        <li>• Fractional ownership allows portfolio diversification</li>
+                        <li>• Regular market valuations ensure fair pricing</li>
+                      </ul>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
           )}
         </div>
       </ModalContent>

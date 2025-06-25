@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { 
   MapPin, 
@@ -68,12 +69,14 @@ export const PropertyCard: React.FC<PropertyCardProps> = ({
         hoverable
       >
         {/* Property Image */}
-        <div className="aspect-video bg-gradient-to-br from-gray-100 to-gray-200 relative">
+        <div className="aspect-video bg-gradient-to-br from-gray-100 to-gray-200 relative overflow-hidden">
           {property.imageUrl ? (
-            <img 
+            <Image 
               src={property.imageUrl} 
-              alt={property.address}
-              className="w-full h-full object-cover"
+              alt={`${property.address}, ${property.city}, ${property.state}`}
+              fill
+              className="object-cover transition-transform duration-300 hover:scale-105"
+              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
             />
           ) : (
             <div className="flex items-center justify-center h-full">
