@@ -78,7 +78,7 @@ export function useRealGovernanceData() {
       return activeProposalIds.map(id => Number(id));
     }
     // Return some mock proposal IDs for demo purposes
-    return [1, 2, 3];
+    return [1, 2, 3, 4];
   }, [activeProposalIds]);
 
   // Prepare contracts for batch reading proposal data
@@ -243,29 +243,131 @@ export function useRealGovernanceData() {
     const processProposalData = async () => {
       if (!proposalStates || !proposalVotes || !proposalSnapshots || !proposalDeadlines || !proposalProposers) {
         // If we don't have real data, create mock proposals for demo
-        const mockProposals: RealProposalData[] = simulatedProposalIds.map(proposalId => {
-          const mockData = getMockProposalData(proposalId);
-          return {
-            id: `proposal-${proposalId}`,
-            proposalId,
-            ...mockData,
+        // Create test proposals with different states for demo workflow
+        const mockProposals: RealProposalData[] = [
+          // Proposal 1: Active (for testing voting)
+          {
+            id: 'proposal-1',
+            proposalId: 1,
+            title: 'Acquire Property: 123 Test Street, Austin, TX',
+            description: 'Sophisticated property acquisition with Chainlink oracle validation. This 3-bedroom property in Austin represents an excellent investment opportunity with strong rental demand and competitive pricing verified by oracle.',
+            proposalType: 'Property Acquisition',
             proposer: '0x742d35Cc6634C0532925a3b8D4e4F7c38f6e1234',
-            status: proposalId === 1 ? 'Active' : proposalId === 2 ? 'Succeeded' : 'Pending',
-            votesFor: Math.floor(Math.random() * 50000 + 10000),
-            votesAgainst: Math.floor(Math.random() * 20000 + 5000),
-            votesAbstain: Math.floor(Math.random() * 5000 + 1000),
-            totalVotes: 0, // Will be calculated
-            quorumReached: Math.random() > 0.3,
-            startTime: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString(),
-            endTime: new Date(Date.now() + Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString(),
-            requiredQuorum: currentQuorum ? Number(formatEther(currentQuorum)) : 100000,
-            userHasVoted: Math.random() > 0.5,
-            userVote: Math.random() > 0.5 ? 'for' : Math.random() > 0.5 ? 'against' : 'abstain',
+            status: 'Active',
+            votesFor: 75000,
+            votesAgainst: 25000, 
+            votesAbstain: 10000,
+            totalVotes: 110000,
+            quorumReached: true,
+            startTime: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
+            endTime: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(), // 5 days from now
+            requiredQuorum: 100000,
+            userHasVoted: false,
             targets: [],
             values: [],
             calldatas: [],
-          };
-        });
+            metadata: JSON.stringify({
+              propertyDetails: {
+                address: '123 Test Street, Austin, TX',
+                askingPrice: 650000,
+                expectedRent: 4200,
+                oracleValue: 580000,
+                confidenceScore: 85
+              }
+            })
+          },
+          
+          // Proposal 2: Succeeded (ready for queueing)
+          {
+            id: 'proposal-2',
+            proposalId: 2,
+            title: 'Acquire Property: 456 Suburban Drive, Dallas, TX',
+            description: 'Mid-range suburban property with excellent rental potential. Chainlink oracle confirms fair market pricing for this 4-bedroom family home in growing Dallas suburb.',
+            proposalType: 'Property Acquisition',
+            proposer: '0x742d35Cc6634C0532925a3b8D4e4F7c38f6e1234',
+            status: 'Succeeded',
+            votesFor: 150000,
+            votesAgainst: 30000,
+            votesAbstain: 15000,
+            totalVotes: 195000,
+            quorumReached: true,
+            startTime: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days ago
+            endTime: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), // Ended yesterday
+            requiredQuorum: 100000,
+            userHasVoted: true,
+            userVote: 'for',
+            targets: [],
+            values: [],
+            calldatas: [],
+            metadata: JSON.stringify({
+              propertyDetails: {
+                address: '456 Suburban Drive, Dallas, TX',
+                askingPrice: 550000,
+                expectedRent: 3800,
+                oracleValue: 520000,
+                confidenceScore: 78
+              }
+            })
+          },
+          
+          // Proposal 3: Queued (ready for execution)
+          {
+            id: 'proposal-3',
+            proposalId: 3,
+            title: 'Acquire Property: 789 Starter Home Street, Houston, TX',
+            description: 'Excellent starter home investment opportunity. Oracle analysis shows this property is underpriced relative to market value, representing strong acquisition potential.',
+            proposalType: 'Property Acquisition',
+            proposer: '0x742d35Cc6634C0532925a3b8D4e4F7c38f6e1234',
+            status: 'Queued',
+            votesFor: 180000,
+            votesAgainst: 45000,
+            votesAbstain: 25000,
+            totalVotes: 250000,
+            quorumReached: true,
+            startTime: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(), // 10 days ago
+            endTime: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(), // Ended 3 days ago
+            requiredQuorum: 100000,
+            userHasVoted: true,
+            userVote: 'for',
+            targets: [],
+            values: [],
+            calldatas: [],
+            metadata: JSON.stringify({
+              propertyDetails: {
+                address: '789 Starter Home Street, Houston, TX',
+                askingPrice: 380000,
+                expectedRent: 2600,
+                oracleValue: 420000,
+                confidenceScore: 82
+              }
+            })
+          },
+          
+          // Proposal 4: Executed (completed workflow)
+          {
+            id: 'proposal-4',
+            proposalId: 4,
+            title: 'Treasury Management: Emergency Fund Allocation',
+            description: 'Allocate emergency fund reserves for operational expenses and property maintenance. This governance proposal ensures DAO sustainability.',
+            proposalType: 'Treasury Management',
+            proposer: '0x742d35Cc6634C0532925a3b8D4e4F7c38f6e1234',
+            status: 'Executed',
+            votesFor: 200000,
+            votesAgainst: 20000,
+            votesAbstain: 30000,
+            totalVotes: 250000,
+            quorumReached: true,
+            startTime: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString(), // 14 days ago
+            endTime: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), // Ended 7 days ago
+            executionTime: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), // Executed yesterday
+            requiredQuorum: 100000,
+            userHasVoted: true,
+            userVote: 'for',
+            targets: [],
+            values: [],
+            calldatas: [],
+          }
+        ];
 
         // Calculate total votes
         mockProposals.forEach(proposal => {

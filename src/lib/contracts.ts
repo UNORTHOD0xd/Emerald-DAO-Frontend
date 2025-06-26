@@ -536,6 +536,7 @@ export const PROPERTY_FACTORY_ABI = [
 ] as const;
 
 // Chainlink Oracle ABI for property valuations
+// Note: Update this ABI to match your actual deployed contract
 export const CHAINLINK_ORACLE_ABI = [
   {
     "inputs": [{"name": "propertyId", "type": "string"}],
@@ -552,7 +553,10 @@ export const CHAINLINK_ORACLE_ABI = [
     "type": "function"
   },
   {
-    "inputs": [{"name": "propertyId", "type": "string"}],
+    "inputs": [
+      {"name": "propertyIdentifier", "type": "string"},
+      {"name": "requestType", "type": "uint8"}
+    ],
     "name": "requestPropertyValuation",
     "outputs": [{"name": "requestId", "type": "bytes32"}],
     "stateMutability": "nonpayable",
@@ -664,6 +668,185 @@ export const KEEPER_ABI = [
   }
 ] as const;
 
+// EmeraldTimelock ABI for proposal execution
+export const EMERALD_TIMELOCK_ABI = [
+  // Scheduling functions
+  {
+    "inputs": [
+      {"name": "target", "type": "address"},
+      {"name": "value", "type": "uint256"},
+      {"name": "data", "type": "bytes"},
+      {"name": "predecessor", "type": "bytes32"},
+      {"name": "salt", "type": "bytes32"},
+      {"name": "delay", "type": "uint256"}
+    ],
+    "name": "schedule",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {"name": "targets", "type": "address[]"},
+      {"name": "values", "type": "uint256[]"},
+      {"name": "payloads", "type": "bytes[]"},
+      {"name": "predecessor", "type": "bytes32"},
+      {"name": "salt", "type": "bytes32"},
+      {"name": "delay", "type": "uint256"}
+    ],
+    "name": "scheduleBatch",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  // Execution functions
+  {
+    "inputs": [
+      {"name": "target", "type": "address"},
+      {"name": "value", "type": "uint256"},
+      {"name": "payload", "type": "bytes"},
+      {"name": "predecessor", "type": "bytes32"},
+      {"name": "salt", "type": "bytes32"}
+    ],
+    "name": "execute",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {"name": "targets", "type": "address[]"},
+      {"name": "values", "type": "uint256[]"},
+      {"name": "payloads", "type": "bytes[]"},
+      {"name": "predecessor", "type": "bytes32"},
+      {"name": "salt", "type": "bytes32"}
+    ],
+    "name": "executeBatch",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  // Management functions
+  {
+    "inputs": [{"name": "id", "type": "bytes32"}],
+    "name": "cancel",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  // Query functions
+  {
+    "inputs": [
+      {"name": "target", "type": "address"},
+      {"name": "value", "type": "uint256"},
+      {"name": "data", "type": "bytes"},
+      {"name": "predecessor", "type": "bytes32"},
+      {"name": "salt", "type": "bytes32"}
+    ],
+    "name": "hashOperation",
+    "outputs": [{"name": "", "type": "bytes32"}],
+    "stateMutability": "pure",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {"name": "targets", "type": "address[]"},
+      {"name": "values", "type": "uint256[]"},
+      {"name": "payloads", "type": "bytes[]"},
+      {"name": "predecessor", "type": "bytes32"},
+      {"name": "salt", "type": "bytes32"}
+    ],
+    "name": "hashOperationBatch",
+    "outputs": [{"name": "", "type": "bytes32"}],
+    "stateMutability": "pure",
+    "type": "function"
+  },
+  {
+    "inputs": [{"name": "id", "type": "bytes32"}],
+    "name": "isOperation",
+    "outputs": [{"name": "", "type": "bool"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{"name": "id", "type": "bytes32"}],
+    "name": "isOperationPending",
+    "outputs": [{"name": "", "type": "bool"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{"name": "id", "type": "bytes32"}],
+    "name": "isOperationReady",
+    "outputs": [{"name": "", "type": "bool"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{"name": "id", "type": "bytes32"}],
+    "name": "isOperationDone",
+    "outputs": [{"name": "", "type": "bool"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{"name": "id", "type": "bytes32"}],
+    "name": "getTimestamp",
+    "outputs": [{"name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getMinDelay",
+    "outputs": [{"name": "", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{"name": "id", "type": "bytes32"}],
+    "name": "getOperationState",
+    "outputs": [{"name": "", "type": "uint8"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  // Events
+  {
+    "anonymous": false,
+    "inputs": [
+      {"indexed": true, "name": "id", "type": "bytes32"},
+      {"indexed": true, "name": "index", "type": "uint256"},
+      {"indexed": false, "name": "target", "type": "address"},
+      {"indexed": false, "name": "value", "type": "uint256"},
+      {"indexed": false, "name": "data", "type": "bytes"},
+      {"indexed": false, "name": "predecessor", "type": "bytes32"},
+      {"indexed": false, "name": "delay", "type": "uint256"}
+    ],
+    "name": "CallScheduled",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {"indexed": true, "name": "id", "type": "bytes32"},
+      {"indexed": true, "name": "index", "type": "uint256"},
+      {"indexed": false, "name": "target", "type": "address"},
+      {"indexed": false, "name": "value", "type": "uint256"},
+      {"indexed": false, "name": "data", "type": "bytes"}
+    ],
+    "name": "CallExecuted",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {"indexed": true, "name": "id", "type": "bytes32"}
+    ],
+    "name": "Cancelled",
+    "type": "event"
+  }
+] as const;
+
 // Helper function to get contract address by name
 export function getContractAddress(contractName: keyof typeof CONTRACTS): `0x${string}` {
   return CONTRACTS[contractName] as `0x${string}`;
@@ -686,6 +869,8 @@ export function getContractABI(contractName: string) {
       return PROPERTY_ACQUISITION_ABI;
     case 'keeper':
       return KEEPER_ABI;
+    case 'timelock':
+      return EMERALD_TIMELOCK_ABI;
     default:
       throw new Error(`Unknown contract: ${contractName}`);
   }
@@ -720,6 +905,10 @@ export const CONTRACT_CONFIG = {
   keeper: {
     address: getContractAddress('keeper'),
     abi: KEEPER_ABI,
+  },
+  timelock: {
+    address: getContractAddress('timelock'),
+    abi: EMERALD_TIMELOCK_ABI,
   },
 } as const;
 

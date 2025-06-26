@@ -160,10 +160,11 @@ export default function Dashboard() {
         <h2 className="text-xl font-semibold text-gray-900 mb-4">
           Quick Actions
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <button 
-            className="p-4 border border-gray-200 rounded-lg hover:border-emerald-300 hover:bg-emerald-50 transition-colors text-left disabled:opacity-50"
+            className="p-4 border border-gray-200 rounded-lg hover:border-emerald-300 hover:bg-emerald-50 transition-colors text-left disabled:opacity-75"
             disabled={!isDAOMember}
+            onClick={() => window.location.href = '/dashboard/properties'}
           >
             <h3 className="font-medium text-gray-900">View Properties</h3>
             <p className="text-sm text-gray-600">
@@ -172,8 +173,9 @@ export default function Dashboard() {
           </button>
           
           <button 
-            className="p-4 border border-gray-200 rounded-lg hover:border-emerald-300 hover:bg-emerald-50 transition-colors text-left disabled:opacity-50"
+            className="p-4 border border-gray-200 rounded-lg hover:border-emerald-300 hover:bg-emerald-50 transition-colors text-left disabled:opacity-75"
             disabled={!canVote}
+            onClick={() => window.location.href = '/dashboard/governance'}
           >
             <h3 className="font-medium text-gray-900">Vote on Proposals</h3>
             <p className="text-sm text-gray-600">
@@ -184,10 +186,28 @@ export default function Dashboard() {
             </p>
           </button>
           
-          <button className="p-4 border border-gray-200 rounded-lg hover:border-emerald-300 hover:bg-emerald-50 transition-colors text-left">
+          <button 
+            className="p-4 border border-gray-200 rounded-lg hover:border-emerald-300 hover:bg-emerald-50 transition-colors text-left"
+            onClick={() => window.location.href = '/dashboard/treasury'}
+          >
             <h3 className="font-medium text-gray-900">View Treasury</h3>
             <p className="text-sm text-gray-600">
               Monitor DAO finances and health score
+            </p>
+          </button>
+
+          <button 
+            className="p-4 border-2 border-emerald-400 bg-emerald-50 rounded-lg hover:border-emerald-500 hover:bg-emerald-100 transition-colors text-left"
+            onClick={() => window.location.href = '/demo/working'}
+          >
+            <div className="flex items-center space-x-2 mb-1">
+              <h3 className="font-medium text-emerald-800">Working Demo</h3>
+              <span className="bg-emerald-200 text-emerald-800 text-xs px-2 py-0.5 rounded-full font-medium">
+                LIVE
+              </span>
+            </div>
+            <p className="text-sm text-emerald-700">
+              Real smart contract interactions with oracle validation and DAO voting
             </p>
           </button>
         </div>

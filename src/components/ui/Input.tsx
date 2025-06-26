@@ -51,7 +51,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
       {label && (
         <label
           htmlFor={inputId}
-          className="block text-sm font-medium text-gray-700 mb-1"
+          className="block text-sm font-medium text-gray-900 mb-1"
         >
           {label}
         </label>
@@ -59,7 +59,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
       <div className="relative">
         {leftIcon && (
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <span className="text-gray-400">{leftIcon}</span>
+            <span className="text-gray-600">{leftIcon}</span>
           </div>
         )}
         <input
@@ -78,7 +78,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
         />
         {rightIcon && (
           <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-            <span className="text-gray-400">{rightIcon}</span>
+            <span className="text-gray-600">{rightIcon}</span>
           </div>
         )}
       </div>
@@ -86,7 +86,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(({
         <p className="mt-1 text-sm text-red-600">{error}</p>
       )}
       {helperText && !error && (
-        <p className="mt-1 text-sm text-gray-500">{helperText}</p>
+        <p className="mt-1 text-sm text-gray-700">{helperText}</p>
       )}
     </div>
   );
@@ -112,7 +112,7 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(({
       {label && (
         <label
           htmlFor={inputId}
-          className="block text-sm font-medium text-gray-700 mb-1"
+          className="block text-sm font-medium text-gray-900 mb-1"
         >
           {label}
         </label>
@@ -134,7 +134,7 @@ export const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(({
         <p className="mt-1 text-sm text-red-600">{error}</p>
       )}
       {helperText && !error && (
-        <p className="mt-1 text-sm text-gray-500">{helperText}</p>
+        <p className="mt-1 text-sm text-gray-700">{helperText}</p>
       )}
     </div>
   );

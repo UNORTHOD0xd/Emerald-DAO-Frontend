@@ -4,16 +4,16 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Search, Filter, Vote, Home } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { ProposalCard } from '@/components/governance';
-import { PropertyAcquisitionForm } from '@/components/property';
+import { EnhancedProposalCard } from '@/components/governance/EnhancedProposalCard';
+import { EnhancedPropertyAcquisitionForm } from '@/components/property';
 import { Button, Input } from '@/components/ui';
 import { useEmeraldDAO } from '@/hooks/useEmeraldDAO';
-import { useGovernanceData } from '@/hooks/useGovernanceData';
+import { useEnhancedGovernanceData } from '@/hooks/useEnhancedGovernanceData';
 
 export default function GovernancePage() {
   const router = useRouter();
   const { canVote, isDAOMember } = useEmeraldDAO();
-  const { proposals, isLoading } = useGovernanceData();
+  const { proposals, isLoading, refreshProposals } = useEnhancedGovernanceData();
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [showPropertyForm, setShowPropertyForm] = useState(false);
@@ -25,13 +25,9 @@ export default function GovernancePage() {
     return matchesSearch && matchesStatus;
   });
 
-  const handleVote = async (proposalId: number, support: 'for' | 'against' | 'abstain') => {
-    try {
-      // TODO: Implement actual voting logic
-      console.log(`Voting ${support} on proposal ${proposalId}`);
-    } catch (error) {
-      console.error('Failed to vote:', error);
-    }
+  const handleVoteComplete = () => {
+    // Refresh proposals after voting
+    refreshProposals();
   };
 
   const handleCreateProposal = () => {
@@ -155,11 +151,11 @@ export default function GovernancePage() {
           className="grid grid-cols-1 lg:grid-cols-2 gap-6"
         >
           {filteredProposals.map((proposal) => (
-            <ProposalCard
+            <EnhancedProposalCard
               key={proposal.id}
               proposal={proposal}
-              onVote={handleVote}
               userCanVote={canVote}
+              onVoteComplete={handleVoteComplete}
               onClick={() => {
                 router.push(`/dashboard/governance/${proposal.id}`);
               }}
@@ -168,14 +164,17 @@ export default function GovernancePage() {
         </motion.div>
       )}
 
-      {/* Property Acquisition Form Modal */}
-      <PropertyAcquisitionForm
+      {/* Enhanced Property Acquisition Form Modal */}
+      <EnhancedPropertyAcquisitionForm
         isOpen={showPropertyForm}
         onClose={() => setShowPropertyForm(false)}
         onSuccess={(proposalId) => {
           console.log('Property proposal created:', proposalId);
           setShowPropertyForm(false);
-          // Optionally refresh proposals or show success message
+          // Refresh proposals to show new one
+          setTimeout(() => {
+            refreshProposals();
+          }, 2000);
         }}
       />
     </div>

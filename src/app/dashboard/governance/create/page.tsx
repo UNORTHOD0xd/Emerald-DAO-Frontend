@@ -342,7 +342,7 @@ export default function CreateProposalPage() {
                 type="button"
                 variant="outline"
                 onClick={() => router.back()}
-                disabled={isSubmitting}
+                disabled={false}
               >
                 Cancel
               </Button>

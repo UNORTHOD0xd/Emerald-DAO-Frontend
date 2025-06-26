@@ -11,7 +11,10 @@ import {
   AlertCircle,
   ArrowRight,
   Calendar,
-  FileText
+  FileText,
+  PlayCircle,
+  Timer,
+  Loader2
 } from 'lucide-react';
 import { Card, CardContent, CardFooter, Button, Badge, ProposalStatusBadge } from '@/components/ui';
 import { useGovernanceActions, VOTE_SUPPORT } from '@/hooks/useGovernanceActions';
@@ -53,7 +56,15 @@ export const ProposalCard: React.FC<ProposalCardProps> = ({
   showActions = true,
   userCanVote = false,
 }) => {
-  const { castVote, isVoting } = useGovernanceActions();
+  const { 
+    castVote, 
+    isVoting, 
+    queueProposal, 
+    executeProposal, 
+    executePropertyAcquisition,
+    isQueueing, 
+    isExecuting 
+  } = useGovernanceActions();
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -129,6 +140,47 @@ export const ProposalCard: React.FC<ProposalCardProps> = ({
   const quorumPercentage = proposal.requiredQuorum > 0 
     ? (proposal.totalVotes / proposal.requiredQuorum) * 100 
     : 0;
+
+  // Handle proposal queueing
+  const handleQueueProposal = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      // In a real implementation, you'd extract these from the proposal metadata
+      const targets = ['0x0000000000000000000000000000000000000000']; // placeholder
+      const values = ['0'];
+      const calldatas = ['0x'];
+      const description = proposal.description;
+      
+      await queueProposal(proposal.proposalId, targets, values, calldatas, description);
+    } catch (error) {
+      console.error('Failed to queue proposal:', error);
+    }
+  };
+
+  // Handle proposal execution
+  const handleExecuteProposal = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      if (proposal.proposalType === 'Property Acquisition') {
+        // Extract property details from metadata
+        const propertyId = `property_${proposal.proposalId}`;
+        const askingPrice = '500000'; // Extract from metadata
+        const propertyAddress = proposal.title; // Extract from metadata
+        
+        await executePropertyAcquisition(proposal.proposalId, propertyId, askingPrice, propertyAddress);
+      } else {
+        // Generic proposal execution
+        const targets = ['0x0000000000000000000000000000000000000000']; // placeholder
+        const values = ['0'];
+        const calldatas = ['0x'];
+        const description = proposal.description;
+        
+        await executeProposal(proposal.proposalId, targets, values, calldatas, description);
+      }
+    } catch (error) {
+      console.error('Failed to execute proposal:', error);
+    }
+  };
 
   return (
     <motion.div
@@ -272,66 +324,102 @@ export const ProposalCard: React.FC<ProposalCardProps> = ({
                 View Details
               </Button>
 
-              {isActive && !hasEnded && userCanVote && !proposal.userHasVoted && (
-                <div className="flex space-x-2">
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={async (e) => {
-                      e.stopPropagation();
-                      try {
-                        await castVote(proposal.proposalId, VOTE_SUPPORT.AGAINST);
-                        onVote?.(proposal.proposalId, 'against');
-                      } catch (error) {
-                        console.error('Failed to vote:', error);
-                      }
-                    }}
-                    disabled={isVoting}
-                    className="text-red-600 border-red-200 hover:bg-red-50"
-                  >
-                    {isVoting ? 'Voting...' : 'Against'}
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    size="sm"
-                    onClick={async (e) => {
-                      e.stopPropagation();
-                      try {
-                        await castVote(proposal.proposalId, VOTE_SUPPORT.ABSTAIN);
-                        onVote?.(proposal.proposalId, 'abstain');
-                      } catch (error) {
-                        console.error('Failed to vote:', error);
-                      }
-                    }}
-                    disabled={isVoting}
-                    className="text-gray-600 border-gray-200 hover:bg-gray-50"
-                  >
-                    {isVoting ? 'Voting...' : 'Abstain'}
-                  </Button>
-                  <Button 
-                    size="sm"
-                    onClick={async (e) => {
-                      e.stopPropagation();
-                      try {
-                        await castVote(proposal.proposalId, VOTE_SUPPORT.FOR);
-                        onVote?.(proposal.proposalId, 'for');
-                      } catch (error) {
-                        console.error('Failed to vote:', error);
-                      }
-                    }}
-                    disabled={isVoting}
-                    className="bg-green-600 hover:bg-green-700"
-                  >
-                    {isVoting ? 'Voting...' : 'Vote For'}
-                  </Button>
-                </div>
-              )}
+              <div className="flex items-center space-x-2">
+                {/* Voting Buttons - Active proposals */}
+                {isActive && !hasEnded && userCanVote && !proposal.userHasVoted && (
+                  <>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        try {
+                          await castVote(proposal.proposalId, VOTE_SUPPORT.AGAINST);
+                          onVote?.(proposal.proposalId, 'against');
+                        } catch (error) {
+                          console.error('Failed to vote:', error);
+                        }
+                      }}
+                      disabled={isVoting}
+                      className="text-red-600 border-red-200 hover:bg-red-50"
+                    >
+                      {isVoting ? 'Voting...' : 'Against'}
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        try {
+                          await castVote(proposal.proposalId, VOTE_SUPPORT.ABSTAIN);
+                          onVote?.(proposal.proposalId, 'abstain');
+                        } catch (error) {
+                          console.error('Failed to vote:', error);
+                        }
+                      }}
+                      disabled={isVoting}
+                      className="text-gray-600 border-gray-200 hover:bg-gray-50"
+                    >
+                      {isVoting ? 'Voting...' : 'Abstain'}
+                    </Button>
+                    <Button 
+                      size="sm"
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        try {
+                          await castVote(proposal.proposalId, VOTE_SUPPORT.FOR);
+                          onVote?.(proposal.proposalId, 'for');
+                        } catch (error) {
+                          console.error('Failed to vote:', error);
+                        }
+                      }}
+                      disabled={isVoting}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      {isVoting ? 'Voting...' : 'Vote For'}
+                    </Button>
+                  </>
+                )}
 
-              {proposal.userHasVoted && (
-                <Badge variant="info">
-                  You voted {proposal.userVote}
-                </Badge>
-              )}
+                {/* Queue Button - Succeeded proposals */}
+                {proposal.status === 'Succeeded' && (
+                  <Button 
+                    size="sm"
+                    onClick={handleQueueProposal}
+                    disabled={isQueueing}
+                    leftIcon={isQueueing ? <Loader2 size={16} className="animate-spin" /> : <Timer size={16} />}
+                    className="bg-yellow-600 hover:bg-yellow-700"
+                  >
+                    {isQueueing ? 'Queueing...' : 'Queue for Execution'}
+                  </Button>
+                )}
+
+                {/* Execute Button - Queued proposals ready for execution */}
+                {proposal.status === 'Queued' && (
+                  <Button 
+                    size="sm"
+                    onClick={handleExecuteProposal}
+                    disabled={isExecuting}
+                    leftIcon={isExecuting ? <Loader2 size={16} className="animate-spin" /> : <PlayCircle size={16} />}
+                    className="bg-emerald-600 hover:bg-emerald-700"
+                  >
+                    {isExecuting ? 'Executing...' : proposal.proposalType === 'Property Acquisition' ? 'Execute Acquisition' : 'Execute Proposal'}
+                  </Button>
+                )}
+
+                {/* Status Badges */}
+                {proposal.userHasVoted && (
+                  <Badge variant="info">
+                    You voted {proposal.userVote}
+                  </Badge>
+                )}
+
+                {proposal.status === 'Executed' && (
+                  <Badge variant="success">
+                    Executed
+                  </Badge>
+                )}
+              </div>
             </div>
           </CardFooter>
         )}

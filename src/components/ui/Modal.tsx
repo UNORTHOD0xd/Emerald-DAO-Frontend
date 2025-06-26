@@ -94,7 +94,7 @@ export const Modal: React.FC<ModalProps> = ({
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ type: 'spring', duration: 0.3 }}
             className={clsx(
-              'relative bg-white rounded-xl shadow-2xl w-full',
+              'relative bg-white rounded-xl shadow-2xl w-full max-h-[90vh] flex flex-col',
               modalSizes[size]
             )}
             onClick={(e) => e.stopPropagation()}

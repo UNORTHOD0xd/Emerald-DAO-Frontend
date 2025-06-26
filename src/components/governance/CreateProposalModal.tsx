@@ -7,7 +7,8 @@ import {
   DollarSign, 
   Building2, 
   Settings,
-  AlertTriangle
+  AlertTriangle,
+  Star
 } from 'lucide-react';
 import { 
   Modal, 
@@ -19,6 +20,7 @@ import {
   TextArea,
   Badge
 } from '@/components/ui';
+import { PropertyAcquisitionForm } from '@/components/property';
 
 interface CreateProposalModalProps {
   isOpen: boolean;
@@ -54,6 +56,14 @@ interface ProposalTemplate {
 }
 
 const proposalTemplates: ProposalTemplate[] = [
+  {
+    id: 'property-acquisition-demo',
+    title: 'Property Acquisition (Demo)',
+    description: 'Try the property acquisition workflow with pre-populated demo data',
+    type: 'Property Acquisition',
+    icon: Star,
+    fields: []
+  },
   {
     id: 'property-acquisition',
     title: 'Property Acquisition',
@@ -117,6 +127,7 @@ export const CreateProposalModal: React.FC<CreateProposalModalProps> = ({
 }) => {
   const [step, setStep] = useState<'template' | 'form'>('template');
   const [selectedTemplate, setSelectedTemplate] = useState<ProposalTemplate | null>(null);
+  const [showPropertyForm, setShowPropertyForm] = useState(false);
   const [formData, setFormData] = useState<ProposalFormData>({
     title: '',
     description: '',
@@ -132,6 +143,17 @@ export const CreateProposalModal: React.FC<CreateProposalModalProps> = ({
 
   const handleTemplateSelect = (template: ProposalTemplate) => {
     setSelectedTemplate(template);
+    
+    if (template.id === 'property-acquisition-demo') {
+      setShowPropertyForm(true);
+      return;
+    }
+    
+    if (template.id === 'property-acquisition') {
+      setShowPropertyForm(true);
+      return;
+    }
+    
     setFormData({
       title: template.title,
       description: template.description,
@@ -206,10 +228,33 @@ export const CreateProposalModal: React.FC<CreateProposalModalProps> = ({
     }
   };
 
+  const handlePropertyFormClose = () => {
+    setShowPropertyForm(false);
+  };
+
+  const handlePropertyFormSuccess = (_proposalId: string) => {
+    setShowPropertyForm(false);
+    onClose();
+    // Reset state
+    setStep('template');
+    setSelectedTemplate(null);
+    setFormData({
+      title: '',
+      description: '',
+      proposalType: 'Other',
+      targets: [],
+      values: [],
+      calldatas: [],
+    });
+    setCustomFields({});
+  };
+
   const handleClose = () => {
     if (!isSubmitting) {
       onClose();
       setStep('template');
+      setShowPropertyForm(false);
+      setSelectedTemplate(null);
       setFormData({
         title: '',
         description: '',
@@ -223,6 +268,7 @@ export const CreateProposalModal: React.FC<CreateProposalModalProps> = ({
   };
 
   return (
+    <>
     <Modal 
       isOpen={isOpen} 
       onClose={handleClose} 
@@ -259,7 +305,7 @@ export const CreateProposalModal: React.FC<CreateProposalModalProps> = ({
                     key={template.id}
                     onClick={() => handleTemplateSelect(template)}
                     disabled={!canCreateProposal}
-                    className="p-4 border border-gray-200 rounded-lg hover:border-emerald-300 hover:bg-emerald-50 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="p-4 border border-gray-200 rounded-lg hover:border-emerald-300 hover:bg-emerald-50 transition-colors text-left disabled:opacity-75 disabled:cursor-not-allowed"
                   >
                     <div className="flex items-start space-x-3">
                       <div className="flex-shrink-0">
@@ -268,9 +314,16 @@ export const CreateProposalModal: React.FC<CreateProposalModalProps> = ({
                       <div className="flex-1">
                         <h3 className="font-medium text-gray-900">{template.title}</h3>
                         <p className="text-sm text-gray-600 mt-1">{template.description}</p>
-                        <Badge variant="neutral" size="sm" className="mt-2">
-                          {template.type}
-                        </Badge>
+                        <div className="flex items-center space-x-2 mt-2">
+                          <Badge variant="neutral" size="sm">
+                            {template.type}
+                          </Badge>
+                          {template.id === 'property-acquisition-demo' && (
+                            <Badge variant="emerald" size="sm">
+                              Demo
+                            </Badge>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </button>
@@ -282,7 +335,7 @@ export const CreateProposalModal: React.FC<CreateProposalModalProps> = ({
               <button
                 onClick={handleCustomProposal}
                 disabled={!canCreateProposal}
-                className="w-full p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-emerald-300 hover:bg-emerald-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full p-4 border-2 border-dashed border-gray-300 rounded-lg hover:border-emerald-300 hover:bg-emerald-50 transition-colors disabled:opacity-75 disabled:cursor-not-allowed"
               >
                 <div className="flex items-center justify-center space-x-2">
                   <Plus size={20} className="text-gray-400" />
@@ -379,5 +432,14 @@ export const CreateProposalModal: React.FC<CreateProposalModalProps> = ({
         )}
       </ModalFooter>
     </Modal>
+    
+    {/* Property Acquisition Form Modal */}
+    <PropertyAcquisitionForm
+      isOpen={showPropertyForm}
+      onClose={handlePropertyFormClose}
+      onSuccess={handlePropertyFormSuccess}
+      demoMode={selectedTemplate?.id === 'property-acquisition-demo'}
+    />
+    </>
   );
 };

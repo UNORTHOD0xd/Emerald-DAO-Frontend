@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { useReadContract, useReadContracts } from 'wagmi';
+import { useReadContract, useReadContracts, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
 import { formatEther } from 'viem';
 import { CONTRACT_CONFIG } from '@/lib/contracts';
 
@@ -31,6 +31,8 @@ export function useRealChainlinkData(propertyId?: string) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+  const [isRequesting, setIsRequesting] = useState(false);
+  const [requestHash, setRequestHash] = useState<`0x${string}` | undefined>();
 
   // Read current property valuation from Chainlink oracle
   const { 
@@ -61,6 +63,22 @@ export function useRealChainlinkData(propertyId?: string) {
       enabled: !!propertyId,
       refetchInterval: 600000, // 10 minutes
     },
+  });
+
+  // Write contract hook for requesting new valuations
+  const { 
+    writeContract, 
+    data: writeHash, 
+    error: writeError, 
+    isPending: isWritePending 
+  } = useWriteContract();
+
+  // Wait for transaction confirmation
+  const { 
+    isLoading: isConfirming, 
+    isSuccess: isConfirmed 
+  } = useWaitForTransactionReceipt({
+    hash: requestHash,
   });
 
   // Generate mock Chainlink data when real oracle data is not available
@@ -292,19 +310,79 @@ export function useRealChainlinkData(propertyId?: string) {
     }
   };
 
-  // Request new valuation function
+  // Handle transaction confirmation
+  useEffect(() => {
+    if (writeHash) {
+      setRequestHash(writeHash);
+    }
+  }, [writeHash]);
+
+  // Handle successful request confirmation
+  useEffect(() => {
+    if (isConfirmed && requestHash) {
+      console.log(`Oracle request confirmed: ${requestHash}`);
+      setIsRequesting(false);
+      setRequestHash(undefined);
+      // Refetch data after successful request
+      setTimeout(() => {
+        refetchValuation();
+      }, 5000); // Wait 5 seconds for oracle to process
+    }
+  }, [isConfirmed, requestHash, refetchValuation]);
+
+  // Handle write errors
+  useEffect(() => {
+    if (writeError) {
+      console.error('Write contract error:', writeError);
+      setError(`Failed to request valuation: ${writeError.message}`);
+      setIsRequesting(false);
+    }
+  }, [writeError]);
+
+  // Request new valuation function - Now makes real contract calls
   const requestValuation = async () => {
-    if (!propertyId) return false;
+    if (!propertyId) {
+      setError('Property ID is required');
+      return false;
+    }
+    
+    // Prevent multiple simultaneous requests
+    if (isRequesting || isWritePending || isConfirming) {
+      console.log('Request already in progress, skipping...');
+      return false;
+    }
+    
+    // Check if requestPropertyValuation function exists in ABI
+    const hasRequestFunction = CONTRACT_CONFIG.oracle.abi.some(
+      (item: any) => item.name === 'requestPropertyValuation' && item.type === 'function'
+    );
+    
+    if (!hasRequestFunction) {
+      setError('Request function not available. Contract needs to implement requestPropertyValuation.');
+      console.warn('requestPropertyValuation function not found in contract ABI');
+      return false;
+    }
+    
+    setIsRequesting(true);
+    setError(null);
     
     try {
-      // In a real implementation, this would call the requestPropertyValuation function
-      // For now, we simulate the request
-      console.log(`Requesting new valuation for property: ${propertyId}`);
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      await refreshData();
+      console.log(`Requesting Chainlink valuation for property: ${propertyId}`);
+      
+      // Make actual contract call to request property valuation
+      writeContract({
+        address: CONTRACT_CONFIG.oracle.address,
+        abi: CONTRACT_CONFIG.oracle.abi,
+        functionName: 'requestPropertyValuation',
+        args: [propertyId],
+      });
+
+      console.log('Oracle request transaction submitted');
       return true;
     } catch (err) {
       console.error('Failed to request valuation:', err);
+      setError(err instanceof Error ? err.message : 'Failed to request valuation');
+      setIsRequesting(false);
       return false;
     }
   };
@@ -317,6 +395,7 @@ export function useRealChainlinkData(propertyId?: string) {
     
     // Loading states
     isLoading: isLoading || valuationLoading || historyLoading,
+    isRequesting: isRequesting || isWritePending || isConfirming,
     error,
     lastRefresh,
     
@@ -329,6 +408,11 @@ export function useRealChainlinkData(propertyId?: string) {
     hasHistoricalData: !!historicalData,
     hasRealData: Boolean(currentValuation),
     shouldUseMockData: !currentValuation,
+    
+    // Transaction states
+    requestHash,
+    isConfirmed,
+    writeError,
     
     // Helper functions
     formatValue: (value: bigint) => parseFloat(formatEther(value)),

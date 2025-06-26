@@ -12,7 +12,12 @@ import {
   Calendar,
   FileText,
   Activity,
-  MessageSquare
+  MessageSquare,
+  PlayCircle,
+  Timer,
+  Loader2,
+  CheckCircle2,
+  ArrowRight
 } from 'lucide-react';
 import { 
   Modal, 
@@ -27,6 +32,7 @@ import {
   ProposalStatusBadge
 } from '@/components/ui';
 import { ProposalData } from './ProposalCard';
+import { useGovernanceActions } from '@/hooks/useGovernanceActions';
 
 interface ProposalDetailsModalProps {
   proposal: ProposalData | null;
@@ -56,6 +62,15 @@ export const ProposalDetailsModal: React.FC<ProposalDetailsModalProps> = ({
   const [activeTab, setActiveTab] = useState<'details' | 'votes' | 'execution'>('details');
   const [isVoting, setIsVoting] = useState(false);
   const [selectedVote, setSelectedVote] = useState<'for' | 'against' | 'abstain' | null>(null);
+  
+  const { 
+    queueProposal, 
+    executeProposal, 
+    executePropertyAcquisition,
+    isQueueing, 
+    isExecuting,
+    getOperationHash 
+  } = useGovernanceActions();
 
   if (!proposal) return null;
 
@@ -424,12 +439,12 @@ export const ProposalDetailsModal: React.FC<ProposalDetailsModalProps> = ({
           )}
 
           {activeTab === 'execution' && (
-            <Card>
-              <CardHeader title="Execution Details" />
-              <CardContent>
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="font-medium text-gray-900 mb-2">Execution Status</h4>
+            <div className="space-y-6">
+              {/* Execution Status */}
+              <Card>
+                <CardHeader title="Execution Status" />
+                <CardContent>
+                  <div className="space-y-4">
                     <div className="flex items-center space-x-2">
                       <ProposalStatusBadge status={proposal.status} />
                       {proposal.status === 'Executed' && proposal.executionTime && (
@@ -438,35 +453,236 @@ export const ProposalDetailsModal: React.FC<ProposalDetailsModalProps> = ({
                         </span>
                       )}
                     </div>
-                  </div>
 
-                  <div>
-                    <h4 className="font-medium text-gray-900 mb-2">Execution Requirements</h4>
-                    <ul className="text-sm text-gray-600 space-y-1">
-                      <li className={`flex items-center space-x-2 ${proposal.quorumReached ? 'text-green-600' : ''}`}>
-                        {proposal.quorumReached ? <CheckCircle size={16} /> : <XCircle size={16} />}
-                        <span>Quorum reached ({quorumPercentage.toFixed(1)}%)</span>
-                      </li>
-                      <li className={`flex items-center space-x-2 ${votePercentageFor > votePercentageAgainst ? 'text-green-600' : 'text-red-600'}`}>
-                        {votePercentageFor > votePercentageAgainst ? <CheckCircle size={16} /> : <XCircle size={16} />}
-                        <span>Majority support ({votePercentageFor.toFixed(1)}% for, {votePercentageAgainst.toFixed(1)}% against)</span>
-                      </li>
-                      <li className={`flex items-center space-x-2 ${hasEnded ? 'text-green-600' : 'text-gray-600'}`}>
-                        {hasEnded ? <CheckCircle size={16} /> : <Clock size={16} />}
-                        <span>Voting period {hasEnded ? 'ended' : 'active'}</span>
-                      </li>
-                    </ul>
-                  </div>
+                    {/* Execution Workflow */}
+                    <div className="mt-4">
+                      <h4 className="font-medium text-gray-900 mb-3">Execution Workflow</h4>
+                      <div className="space-y-3">
+                        {/* Step 1: Voting */}
+                        <div className="flex items-center space-x-3">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                            hasEnded ? 'bg-green-100 text-green-600' : proposal.status === 'Active' ? 'bg-blue-100 text-blue-600' : 'bg-gray-100 text-gray-400'
+                          }`}>
+                            {hasEnded ? <CheckCircle2 size={16} /> : <Vote size={16} />}
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-2">
+                              <span className="font-medium">Governance Vote</span>
+                              {hasEnded ? (
+                                <Badge variant="success" size="sm">Completed</Badge>
+                              ) : proposal.status === 'Active' ? (
+                                <Badge variant="info" size="sm">In Progress</Badge>
+                              ) : (
+                                <Badge variant="neutral" size="sm">Pending</Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-gray-600">
+                              {hasEnded 
+                                ? `Voting ended ${formatDate(proposal.endTime)}`
+                                : proposal.status === 'Active'
+                                ? `${formatTimeRemaining(timeRemaining)} remaining`
+                                : 'Voting has not started'
+                              }
+                            </p>
+                          </div>
+                        </div>
 
-                  <div>
-                    <h4 className="font-medium text-gray-900 mb-2">Transaction Details</h4>
-                    <p className="text-sm text-gray-600">
-                      Transaction details will be available when the proposal is ready for execution.
-                    </p>
+                        {/* Arrow */}
+                        {hasEnded && (
+                          <div className="flex justify-center">
+                            <ArrowRight size={16} className="text-gray-400" />
+                          </div>
+                        )}
+
+                        {/* Step 2: Queue */}
+                        <div className="flex items-center space-x-3">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                            proposal.status === 'Queued' || proposal.status === 'Executed' ? 'bg-green-100 text-green-600' : 
+                            proposal.status === 'Succeeded' ? 'bg-yellow-100 text-yellow-600' : 'bg-gray-100 text-gray-400'
+                          }`}>
+                            {proposal.status === 'Queued' || proposal.status === 'Executed' ? <CheckCircle2 size={16} /> : <Timer size={16} />}
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-2">
+                              <span className="font-medium">Timelock Queue</span>
+                              {proposal.status === 'Queued' || proposal.status === 'Executed' ? (
+                                <Badge variant="success" size="sm">Queued</Badge>
+                              ) : proposal.status === 'Succeeded' ? (
+                                <Badge variant="warning" size="sm">Ready to Queue</Badge>
+                              ) : (
+                                <Badge variant="neutral" size="sm">Waiting</Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-gray-600">
+                              {proposal.status === 'Succeeded' 
+                                ? 'Proposal passed and ready to be queued in timelock'
+                                : proposal.status === 'Queued'
+                                ? 'Queued in timelock with 24-hour delay'
+                                : 'Waiting for successful vote completion'
+                              }
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Arrow */}
+                        {(proposal.status === 'Queued' || proposal.status === 'Executed') && (
+                          <div className="flex justify-center">
+                            <ArrowRight size={16} className="text-gray-400" />
+                          </div>
+                        )}
+
+                        {/* Step 3: Execute */}
+                        <div className="flex items-center space-x-3">
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                            proposal.status === 'Executed' ? 'bg-green-100 text-green-600' : 
+                            proposal.status === 'Queued' ? 'bg-emerald-100 text-emerald-600' : 'bg-gray-100 text-gray-400'
+                          }`}>
+                            {proposal.status === 'Executed' ? <CheckCircle2 size={16} /> : <PlayCircle size={16} />}
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center space-x-2">
+                              <span className="font-medium">Execute Proposal</span>
+                              {proposal.status === 'Executed' ? (
+                                <Badge variant="success" size="sm">Executed</Badge>
+                              ) : proposal.status === 'Queued' ? (
+                                <Badge variant="emerald" size="sm">Ready to Execute</Badge>
+                              ) : (
+                                <Badge variant="neutral" size="sm">Pending</Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-gray-600">
+                              {proposal.status === 'Executed' 
+                                ? `Executed on ${formatDate(proposal.executionTime || '')}`
+                                : proposal.status === 'Queued'
+                                ? proposal.proposalType === 'Property Acquisition'
+                                  ? 'Execute property acquisition and mint NFT'
+                                  : 'Execute proposal actions'
+                                : 'Waiting for timelock queue'
+                              }
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+
+              {/* Execution Requirements */}
+              <Card>
+                <CardHeader title="Execution Requirements" />
+                <CardContent>
+                  <ul className="space-y-3">
+                    <li className={`flex items-center space-x-3 ${proposal.quorumReached ? 'text-green-600' : ''}`}>
+                      {proposal.quorumReached ? <CheckCircle size={16} /> : <XCircle size={16} />}
+                      <span>Quorum reached ({quorumPercentage.toFixed(1)}% of {proposal.requiredQuorum.toLocaleString()} required)</span>
+                    </li>
+                    <li className={`flex items-center space-x-3 ${votePercentageFor > votePercentageAgainst ? 'text-green-600' : 'text-red-600'}`}>
+                      {votePercentageFor > votePercentageAgainst ? <CheckCircle size={16} /> : <XCircle size={16} />}
+                      <span>Majority support ({votePercentageFor.toFixed(1)}% for, {votePercentageAgainst.toFixed(1)}% against)</span>
+                    </li>
+                    <li className={`flex items-center space-x-3 ${hasEnded ? 'text-green-600' : 'text-gray-600'}`}>
+                      {hasEnded ? <CheckCircle size={16} /> : <Clock size={16} />}
+                      <span>Voting period {hasEnded ? 'completed' : 'in progress'}</span>
+                    </li>
+                  </ul>
+                </CardContent>
+              </Card>
+
+              {/* Action Buttons */}
+              {proposal.status === 'Succeeded' && (
+                <Card>
+                  <CardHeader title="Available Actions" />
+                  <CardContent>
+                    <div className="flex flex-col space-y-3">
+                      <Button 
+                        onClick={async () => {
+                          try {
+                            const targets = ['0x0000000000000000000000000000000000000000'];
+                            const values = ['0'];
+                            const calldatas = ['0x'];
+                            await queueProposal(proposal.proposalId, targets, values, calldatas, proposal.description);
+                          } catch (error) {
+                            console.error('Failed to queue proposal:', error);
+                          }
+                        }}
+                        disabled={isQueueing}
+                        leftIcon={isQueueing ? <Loader2 size={16} className="animate-spin" /> : <Timer size={16} />}
+                        className="w-full"
+                      >
+                        {isQueueing ? 'Queueing in Timelock...' : 'Queue Proposal for Execution'}
+                      </Button>
+                      <p className="text-sm text-gray-600">
+                        This will queue the proposal in the timelock contract with a 24-hour delay before execution is possible.
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {proposal.status === 'Queued' && (
+                <Card>
+                  <CardHeader title="Execute Proposal" />
+                  <CardContent>
+                    <div className="flex flex-col space-y-3">
+                      <Button 
+                        onClick={async () => {
+                          try {
+                            if (proposal.proposalType === 'Property Acquisition') {
+                              const propertyId = `property_${proposal.proposalId}`;
+                              const askingPrice = '500000';
+                              await executePropertyAcquisition(proposal.proposalId, propertyId, askingPrice, proposal.title);
+                            } else {
+                              const targets = ['0x0000000000000000000000000000000000000000'];
+                              const values = ['0'];
+                              const calldatas = ['0x'];
+                              await executeProposal(proposal.proposalId, targets, values, calldatas, proposal.description);
+                            }
+                          } catch (error) {
+                            console.error('Failed to execute proposal:', error);
+                          }
+                        }}
+                        disabled={isExecuting}
+                        leftIcon={isExecuting ? <Loader2 size={16} className="animate-spin" /> : <PlayCircle size={16} />}
+                        className="w-full bg-emerald-600 hover:bg-emerald-700"
+                      >
+                        {isExecuting ? 'Executing...' : 
+                         proposal.proposalType === 'Property Acquisition' ? 'Execute Property Acquisition' : 'Execute Proposal'}
+                      </Button>
+                      <p className="text-sm text-gray-600">
+                        {proposal.proposalType === 'Property Acquisition' 
+                          ? 'This will execute the property acquisition, transfer funds, and mint the property NFT.'
+                          : 'This will execute the proposal actions through the timelock contract.'
+                        }
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Chainlink Integration Info for Property Proposals */}
+              {proposal.proposalType === 'Property Acquisition' && (
+                <Card>
+                  <CardHeader title="Chainlink Oracle Integration" />
+                  <CardContent>
+                    <div className="space-y-3">
+                      <div className="flex items-center space-x-2">
+                        <Activity size={16} className="text-blue-600" />
+                        <span className="font-medium">Real Estate Valuation Oracle</span>
+                      </div>
+                      <p className="text-sm text-gray-600">
+                        This property acquisition proposal includes Chainlink oracle validation for accurate property valuation and market analysis.
+                      </p>
+                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                        <p className="text-sm text-blue-800">
+                          Upon execution, the oracle data will be used to verify the final acquisition price and update the property NFT metadata with verified valuation information.
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
           )}
         </div>
       </ModalContent>
