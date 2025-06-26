@@ -186,7 +186,8 @@ export function useProposalDemo() {
         proposer: address,
       };
 
-      const metadataURI = `data:application/json;base64,${btoa(JSON.stringify(metadata))}`;
+      // Create short metadata URI that stays under 200 character contract limit
+      const metadataURI = `ipfs://mock-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 
       // Create proposal with real contract interaction
       writeContract({

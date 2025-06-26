@@ -28,8 +28,8 @@ const inputSizes = {
 };
 
 const inputVariants = {
-  default: 'border-gray-300 focus:border-emerald-500 focus:ring-emerald-500',
-  filled: 'border-transparent bg-gray-100 focus:border-emerald-500 focus:ring-emerald-500 focus:bg-white',
+  default: 'border-gray-300 focus:border-emerald-500 focus:ring-emerald-500 text-gray-900 placeholder:text-gray-500',
+  filled: 'border-transparent bg-gray-100 focus:border-emerald-500 focus:ring-emerald-500 focus:bg-white text-gray-900 placeholder:text-gray-500',
 };
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(({

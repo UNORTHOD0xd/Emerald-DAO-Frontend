@@ -289,7 +289,7 @@ export const PropertyGrid: React.FC<PropertyGridProps> = ({
             <select
               value={filterType}
               onChange={(e) => setFilterType(e.target.value as FilterType)}
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 bg-white"
             >
               {propertyTypeOptions.map(type => (
                 <option key={type} value={type}>
@@ -304,7 +304,7 @@ export const PropertyGrid: React.FC<PropertyGridProps> = ({
             <select
               value={sortField}
               onChange={(e) => setSortField(e.target.value as SortField)}
-              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 text-gray-900 bg-white"
             >
               <option value="value">Value</option>
               <option value="rent">Rent</option>

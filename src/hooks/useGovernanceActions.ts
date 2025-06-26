@@ -61,8 +61,7 @@ export function useGovernanceActions() {
 
       // Extract property-specific fields
       const propertyAddress = formData.propertyAddress || '';
-      const askingPrice = parseEther(formData.acquisitionPrice?.toString() || '0');
-      const expectedRent = parseEther(formData.expectedRoi?.toString() || '0');
+      const askingPriceEther = formData.acquisitionPrice?.toString() || '0';
       
       // Create metadata URI (in production, this would be uploaded to IPFS)
       const metadata = {
@@ -79,21 +78,20 @@ export function useGovernanceActions() {
         proposer: address,
       };
       
-      const metadataURI = `data:application/json;base64,${btoa(JSON.stringify(metadata))}`;
+      // Create short metadata URI that stays under 200 character contract limit
+      const metadataURI = `ipfs://mock-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 
-      // Call property acquisition contract
+      // Call property acquisition contract with correct parameters and bond
       writePropertyAcquisition({
         address: CONTRACT_CONFIG.propertyAcquisition.address,
         abi: CONTRACT_CONFIG.propertyAcquisition.abi,
         functionName: 'createPropertyProposal',
         args: [
-          formData.title,
-          formData.description,
           propertyAddress,
-          askingPrice,
-          expectedRent,
           metadataURI,
+          parseEther(askingPriceEther), // Convert to wei like PropertyAcquisitionForm does
         ],
+        value: parseEther('0.1'), // Required MIN_PROPOSAL_BOND
       });
 
       return { success: true };
@@ -155,7 +153,7 @@ export function useGovernanceActions() {
 
       // For governance changes, we target the DAO contract itself
       const targets = [CONTRACT_CONFIG.dao.address];
-      const values = [0n]; // No ETH value for governance changes
+      const values = [BigInt(0)]; // No ETH value for governance changes
       
       // Encode the governance parameter change
       // This would depend on the specific parameter being changed
@@ -194,7 +192,7 @@ export function useGovernanceActions() {
 
       // Emergency proposals might target multiple contracts
       const targets = [CONTRACT_CONFIG.vault.address]; // Could expand based on action
-      const values = [0n];
+      const values = [BigInt(0)];
       
       // Emergency actions encoded as calldata
       const calldata = encodeAbiParameters(
@@ -418,7 +416,6 @@ export function useGovernanceActions() {
   // Execute property acquisition specifically
   const executePropertyAcquisition = async (
     proposalId: number,
-    propertyId: string,
     askingPrice: string,
     propertyAddress: string
   ) => {
@@ -433,7 +430,7 @@ export function useGovernanceActions() {
       const executionCalldata = encodeFunctionData({
         abi: CONTRACT_CONFIG.propertyAcquisition.abi,
         functionName: 'executePropertyAcquisition',
-        args: [BigInt(proposalId), propertyId],
+        args: [BigInt(proposalId)],
       });
 
       // Create the timelock execution parameters
@@ -453,14 +450,14 @@ export function useGovernanceActions() {
   };
 
   // Check if operation is ready to execute (simplified for now)
-  const isOperationReady = (operationId: string): boolean => {
+  const isOperationReady = (_operationId: string): boolean => {
     // In production, this would use useReadContract hook properly
     // For now, return true after checking if operation exists
     return true;
   };
 
   // Get operation timestamp (simplified for now)
-  const getOperationTimestamp = (operationId: string): number => {
+  const getOperationTimestamp = (_operationId: string): number => {
     // In production, this would use useReadContract hook properly
     // For now, return current time + 1 day
     return Date.now() + 86400000;

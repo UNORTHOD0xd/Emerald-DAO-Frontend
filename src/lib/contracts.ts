@@ -535,19 +535,25 @@ export const PROPERTY_FACTORY_ABI = [
   }
 ] as const;
 
-// Chainlink Oracle ABI for property valuations
-// Note: Update this ABI to match your actual deployed contract
+// Chainlink Oracle ABI for property valuations - Updated to match deployed contract
 export const CHAINLINK_ORACLE_ABI = [
   {
-    "inputs": [{"name": "propertyId", "type": "string"}],
+    "inputs": [{"name": "propertyIdentifier", "type": "string"}],
     "name": "getPropertyValuation",
     "outputs": [
-      {"name": "estimatedValue", "type": "uint256"},
-      {"name": "rentEstimate", "type": "uint256"},
-      {"name": "lastUpdated", "type": "uint256"},
-      {"name": "confidenceScore", "type": "uint256"},
-      {"name": "dataSource", "type": "string"},
-      {"name": "isActive", "type": "bool"}
+      {"name": "valuation", "type": "tuple", "components": [
+        {"name": "estimatedValue", "type": "uint256"},
+        {"name": "rentEstimate", "type": "uint256"},
+        {"name": "lastUpdated", "type": "uint256"},
+        {"name": "confidenceScore", "type": "uint256"},
+        {"name": "dataSource", "type": "string"},
+        {"name": "isActive", "type": "bool"},
+        {"name": "pricePerSqFt", "type": "uint256"},
+        {"name": "bedrooms", "type": "uint256"},
+        {"name": "bathrooms", "type": "uint256"},
+        {"name": "sqft", "type": "uint256"},
+        {"name": "lastUpdatedBy", "type": "address"}
+      ]}
     ],
     "stateMutability": "view",
     "type": "function"
@@ -563,65 +569,158 @@ export const CHAINLINK_ORACLE_ABI = [
     "type": "function"
   },
   {
-    "inputs": [{"name": "propertyId", "type": "string"}],
-    "name": "getValuationHistory",
-    "outputs": [
-      {"name": "timestamps", "type": "uint256[]"},
-      {"name": "values", "type": "uint256[]"},
-      {"name": "confidenceScores", "type": "uint256[]"}
-    ],
+    "inputs": [{"name": "propertyIdentifier", "type": "string"}],
+    "name": "isValuationCurrent",
+    "outputs": [{"name": "isCurrent", "type": "bool"}],
     "stateMutability": "view",
-    "type": "function"
-  }
-] as const;
-
-// Property Acquisition ABI for proposal creation and management
-export const PROPERTY_ACQUISITION_ABI = [
-  {
-    "inputs": [
-      {"name": "title", "type": "string"},
-      {"name": "description", "type": "string"},
-      {"name": "propertyAddress", "type": "string"},
-      {"name": "askingPrice", "type": "uint256"},
-      {"name": "expectedRent", "type": "uint256"},
-      {"name": "metadataUri", "type": "string"}
-    ],
-    "name": "createPropertyProposal",
-    "outputs": [{"name": "proposalId", "type": "uint256"}],
-    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
-    "inputs": [{"name": "proposalId", "type": "uint256"}],
-    "name": "getPropertyProposal",
+    "inputs": [],
+    "name": "getOracleStats",
     "outputs": [
-      {"name": "title", "type": "string"},
-      {"name": "description", "type": "string"},
-      {"name": "propertyAddress", "type": "string"},
-      {"name": "askingPrice", "type": "uint256"},
-      {"name": "expectedRent", "type": "uint256"},
-      {"name": "proposer", "type": "address"},
-      {"name": "created", "type": "uint256"},
-      {"name": "status", "type": "uint8"}
+      {"name": "totalProperties", "type": "uint256"},
+      {"name": "totalFulfilled", "type": "uint256"},
+      {"name": "totalFailed", "type": "uint256"},
+      {"name": "successRate", "type": "uint256"}
     ],
     "stateMutability": "view",
     "type": "function"
   },
   {
     "inputs": [],
-    "name": "getActiveProposals",
-    "outputs": [{"name": "", "type": "uint256[]"}],
+    "name": "getSourceCodeHash",
+    "outputs": [{"name": "sourceHash", "type": "bytes32"}],
     "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "subscriptionId",
+    "outputs": [{"name": "", "type": "uint64"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {"indexed": true, "name": "requestId", "type": "bytes32"},
+      {"indexed": true, "name": "propertyIdentifier", "type": "string"},
+      {"indexed": true, "name": "requester", "type": "address"},
+      {"indexed": false, "name": "requestType", "type": "uint8"},
+      {"indexed": false, "name": "timestamp", "type": "uint256"}
+    ],
+    "name": "ValuationRequested",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {"indexed": true, "name": "requestId", "type": "bytes32"},
+      {"indexed": true, "name": "propertyIdentifier", "type": "string"},
+      {"indexed": false, "name": "estimatedValue", "type": "uint256"},
+      {"indexed": false, "name": "rentEstimate", "type": "uint256"},
+      {"indexed": false, "name": "confidenceScore", "type": "uint256"},
+      {"indexed": false, "name": "dataSource", "type": "string"}
+    ],
+    "name": "ValuationFulfilled",
+    "type": "event"
+  }
+] as const;
+
+// Property Acquisition ABI for proposal creation and management (matches deployed contract)
+export const PROPERTY_ACQUISITION_ABI = [
+  {
+    "inputs": [
+      {"name": "propertyAddress", "type": "string"},
+      {"name": "metadataURI", "type": "string"},
+      {"name": "proposedPrice", "type": "uint256"}
+    ],
+    "name": "createPropertyProposal",
+    "outputs": [{"name": "proposalId", "type": "uint256"}],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [{"name": "proposalId", "type": "uint256"}],
+    "name": "getProposal",
+    "outputs": [
+      {"name": "proposal", "type": "tuple", "components": [
+        {"name": "id", "type": "uint256"},
+        {"name": "proposer", "type": "address"},
+        {"name": "propertyAddress", "type": "string"},
+        {"name": "metadataURI", "type": "string"},
+        {"name": "proposedPrice", "type": "uint256"},
+        {"name": "oracleValuation", "type": "uint256"},
+        {"name": "proposalBond", "type": "uint256"},
+        {"name": "createdAt", "type": "uint256"},
+        {"name": "daoProposalId", "type": "uint256"},
+        {"name": "state", "type": "uint8"},
+        {"name": "oracleRequestId", "type": "bytes32"},
+        {"name": "oracleComplete", "type": "bool"},
+        {"name": "daoProposalCreated", "type": "bool"},
+        {"name": "rejectionReason", "type": "string"},
+        {"name": "oracleCompletedAt", "type": "uint256"},
+        {"name": "oracleOperator", "type": "address"}
+      ]}
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getAllProposals",
+    "outputs": [{"name": "proposalIds", "type": "uint256[]"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getProposalCount",
+    "outputs": [{"name": "count", "type": "uint256"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{"name": "proposalId", "type": "uint256"}],
+    "name": "requestOracleValuation",
+    "outputs": [{"name": "requestId", "type": "bytes32"}],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [{"name": "proposalId", "type": "uint256"}],
+    "name": "completeOracleValuation",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
     "inputs": [
       {"name": "proposalId", "type": "uint256"},
-      {"name": "propertyId", "type": "string"}
+      {"name": "description", "type": "string"}
     ],
-    "name": "executePropertyAcquisition",
-    "outputs": [{"name": "success", "type": "bool"}],
+    "name": "createDAOProposal",
+    "outputs": [{"name": "daoProposalId", "type": "uint256"}],
     "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [{"name": "proposalId", "type": "uint256"}],
+    "name": "executePropertyAcquisition",
+    "outputs": [],
+    "stateMutability": "payable",
+    "type": "function"
+  },
+  {
+    "inputs": [{"name": "propertyAddress", "type": "string"}],
+    "name": "hasActiveProposal",
+    "outputs": [
+      {"name": "hasProposal", "type": "bool"},
+      {"name": "proposalId", "type": "uint256"},
+      {"name": "state", "type": "uint8"}
+    ],
+    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -630,7 +729,9 @@ export const PROPERTY_ACQUISITION_ABI = [
       {"indexed": true, "name": "proposalId", "type": "uint256"},
       {"indexed": true, "name": "proposer", "type": "address"},
       {"indexed": false, "name": "propertyAddress", "type": "string"},
-      {"indexed": false, "name": "askingPrice", "type": "uint256"}
+      {"indexed": false, "name": "proposedPrice", "type": "uint256"},
+      {"indexed": false, "name": "metadataURI", "type": "string"},
+      {"indexed": false, "name": "bondAmount", "type": "uint256"}
     ],
     "name": "PropertyProposalCreated",
     "type": "event"
@@ -639,8 +740,9 @@ export const PROPERTY_ACQUISITION_ABI = [
     "anonymous": false,
     "inputs": [
       {"indexed": true, "name": "proposalId", "type": "uint256"},
-      {"indexed": false, "name": "propertyId", "type": "string"},
-      {"indexed": false, "name": "finalPrice", "type": "uint256"}
+      {"indexed": true, "name": "tokenId", "type": "uint256"},
+      {"indexed": false, "name": "acquisitionPrice", "type": "uint256"},
+      {"indexed": true, "name": "executor", "type": "address"}
     ],
     "name": "PropertyAcquired",
     "type": "event"

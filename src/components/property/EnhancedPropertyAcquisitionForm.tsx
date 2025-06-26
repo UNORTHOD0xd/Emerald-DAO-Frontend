@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { 
   MapPin, 
@@ -15,7 +15,7 @@ import {
   Activity,
   Database
 } from 'lucide-react';
-import { useAccount, useWriteContract, useWaitForTransactionReceipt } from 'wagmi';
+import { useAccount, useWriteContract, useWaitForTransactionReceipt, useBalance } from 'wagmi';
 import { parseEther } from 'viem';
 import { 
   Card, 
@@ -62,7 +62,8 @@ export const EnhancedPropertyAcquisitionForm: React.FC<EnhancedPropertyAcquisiti
   onSuccess,
   preSelectedProperty,
 }) => {
-  const { address, isConnected } = useAccount();
+  const { address, isConnected, chain } = useAccount();
+  const { data: balance } = useBalance({ address });
   const { canVote, votingPower } = useEmeraldDAO();
   const [step, setStep] = useState(preSelectedProperty ? 1 : 0);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -129,57 +130,107 @@ export const EnhancedPropertyAcquisitionForm: React.FC<EnhancedPropertyAcquisiti
     }
   }, [preSelectedProperty]);
 
+  // Monitor transaction states for debugging
+  useEffect(() => {
+    if (proposalError) {
+      console.error('Transaction Error:', proposalError);
+      console.error('Error Details:', {
+        name: proposalError.name,
+        message: proposalError.message,
+        cause: proposalError.cause,
+        stack: proposalError.stack
+      });
+      setIsSubmitting(false);
+    }
+  }, [proposalError]);
+
+  useEffect(() => {
+    if (proposalHash) {
+      console.log('Transaction submitted:', proposalHash);
+    }
+  }, [proposalHash]);
+
+  useEffect(() => {
+    if (isConfirming) {
+      console.log('Transaction confirming...');
+    }
+  }, [isConfirming]);
+
+  useEffect(() => {
+    if (isSuccess) {
+      console.log('Transaction confirmed successfully!');
+      setIsSubmitting(false);
+      if (onSuccess) {
+        onSuccess(proposalHash || '');
+      }
+      onClose();
+    }
+  }, [isSuccess, proposalHash, onSuccess, onClose]);
+
   // Track if form has been closed explicitly by user
   const [shouldPreserveData, setShouldPreserveData] = useState(false);
+  const [hasStartedWorkflow, setHasStartedWorkflow] = useState(false);
   
-  // Mark data as worth preserving when oracle request starts
-  useEffect(() => {
-    if (isRequesting || hasValuation) {
-      setShouldPreserveData(true);
+  // Explicit reset function
+  const resetForm = useCallback(() => {
+    setStep(preSelectedProperty ? 1 : 0);
+    setSelectedProperty(preSelectedProperty || null);
+    if (!preSelectedProperty) {
+      setFormData({
+        address: '',
+        city: '',
+        state: '',
+        zipCode: '',
+        propertyType: 'Residential',
+        bedrooms: 1,
+        bathrooms: 1,
+        sqft: 1000,
+        askingPrice: '',
+        expectedMonthlyRent: '',
+        description: '',
+        deedUrl: '',
+        inspectionUrl: '',
+        appraisalUrl: '',
+        photoUrls: [],
+      });
+      resetOracle();
     }
-  }, [isRequesting, hasValuation]);
+    setIsSubmitting(false);
+    setShouldPreserveData(false);
+    setHasStartedWorkflow(false);
+  }, [preSelectedProperty, resetOracle]);
+  
+  // Mark data as worth preserving when oracle request starts or workflow begins
+  useEffect(() => {
+    if (isRequesting || hasValuation || step > 1 || currentRequest) {
+      setShouldPreserveData(true);
+      setHasStartedWorkflow(true);
+    }
+  }, [isRequesting, hasValuation, step, currentRequest]);
 
   // Reset form only when modal closes and we don't need to preserve data
   useEffect(() => {
-    if (!isOpen && !shouldPreserveData) {
+    if (!isOpen && !shouldPreserveData && !hasStartedWorkflow) {
       console.log('Resetting form - modal closed without data to preserve');
-      setStep(preSelectedProperty ? 1 : 0);
-      setSelectedProperty(preSelectedProperty || null);
-      if (!preSelectedProperty) {
-        setFormData({
-          address: '',
-          city: '',
-          state: '',
-          zipCode: '',
-          propertyType: 'Residential',
-          bedrooms: 1,
-          bathrooms: 1,
-          sqft: 1000,
-          askingPrice: '',
-          expectedMonthlyRent: '',
-          description: '',
-          deedUrl: '',
-          inspectionUrl: '',
-          appraisalUrl: '',
-          photoUrls: [],
-        });
-        resetOracle();
-      }
-      setIsSubmitting(false);
+      resetForm();
     }
     
-    // Reset preservation flag when modal actually closes
-    if (!isOpen) {
+    // Reset preservation flags when modal actually closes after successful submission
+    if (!isOpen && (isSuccess || !hasStartedWorkflow)) {
       setTimeout(() => {
         setShouldPreserveData(false);
-      }, 1000); // Small delay to prevent immediate reset
+        setHasStartedWorkflow(false);
+      }, 2000); // Longer delay to prevent premature reset during transaction flow
     }
-  }, [isOpen, shouldPreserveData, preSelectedProperty, resetOracle]);
+  }, [isOpen, shouldPreserveData, hasStartedWorkflow, isSuccess, resetForm]);
 
   // Handle successful proposal creation
   useEffect(() => {
     if (isSuccess && proposalHash) {
       onSuccess?.(proposalHash);
+      // Allow form to reset after successful completion
+      setShouldPreserveData(false);
+      setHasStartedWorkflow(false);
       onClose();
     }
   }, [isSuccess, proposalHash, onSuccess, onClose]);
@@ -204,6 +255,9 @@ export const EnhancedPropertyAcquisitionForm: React.FC<EnhancedPropertyAcquisiti
       photoUrls: property.photoUrls,
     });
     setStep(1);
+    // Reset workflow tracking when selecting a new property
+    setHasStartedWorkflow(false);
+    setShouldPreserveData(false);
   };
 
   const handleInputChange = (field: keyof PropertyFormData, value: string | number) => {
@@ -216,9 +270,14 @@ export const EnhancedPropertyAcquisitionForm: React.FC<EnhancedPropertyAcquisiti
   const handleRequestOracle = async () => {
     const propertyIdentifier = `${formData.address}, ${formData.city}, ${formData.state} ${formData.zipCode}`;
     try {
+      // Mark workflow as started to prevent form reset during transaction
+      setHasStartedWorkflow(true);
+      setShouldPreserveData(true);
+      
       await requestValuation(propertyIdentifier, 'FULL');
     } catch (error) {
       console.error('Failed to request oracle valuation:', error);
+      // Don't reset flags on error - let user retry
     }
   };
 
@@ -258,7 +317,7 @@ export const EnhancedPropertyAcquisitionForm: React.FC<EnhancedPropertyAcquisiti
       case 2:
         return !!(formData.askingPrice && formData.expectedMonthlyRent && formData.sqft > 0);
       case 3:
-        return hasValuation && isOracleCompleted;
+        return hasValuation || (currentRequest?.status === 'COMPLETED');
       case 4:
         return !!formData.description;
       case 5:
@@ -289,8 +348,8 @@ export const EnhancedPropertyAcquisitionForm: React.FC<EnhancedPropertyAcquisiti
       return;
     }
 
-    if (!hasValuation) {
-      alert('Oracle valuation required');
+    if (!hasValuation && currentRequest?.status !== 'COMPLETED') {
+      alert('Oracle valuation required - please complete step 3 first');
       return;
     }
 
@@ -299,59 +358,57 @@ export const EnhancedPropertyAcquisitionForm: React.FC<EnhancedPropertyAcquisiti
     try {
       const fullAddress = `${formData.address}, ${formData.city}, ${formData.state} ${formData.zipCode}`;
       
-      // Create comprehensive proposal metadata
-      const proposalMetadata = {
-        title: `Acquire Property: ${formData.address}`,
-        description: formData.description,
-        propertyData: {
-          address: fullAddress,
-          propertyType: formData.propertyType,
-          bedrooms: formData.bedrooms,
-          bathrooms: formData.bathrooms,
-          sqft: formData.sqft,
-          askingPrice: formData.askingPrice,
-          expectedMonthlyRent: formData.expectedMonthlyRent,
-          estimatedROI: calculateROI(),
-          priceAnalysis: getPriceAnalysis(),
-          documents: {
-            deed: formData.deedUrl,
-            inspection: formData.inspectionUrl,
-            appraisal: formData.appraisalUrl,
-            photos: formData.photoUrls.filter(url => url.trim() !== ''),
-          },
-          chainlinkOracle: formattedValuation ? {
-            requestId: currentRequest?.requestId,
-            transactionHash: currentRequest?.transactionHash,
-            estimatedValue: formattedValuation.estimatedValueUSD,
-            monthlyRent: formattedValuation.monthlyRentUSD,
-            confidenceScore: formattedValuation.confidenceScore,
-            dataSource: formattedValuation.dataSource,
-            validatedAt: formattedValuation.lastUpdated.toISOString(),
-          } : null,
-        },
-        type: 'property_acquisition',
-        createdAt: new Date().toISOString(),
-        proposer: address,
+      // Create lightweight proposal metadata (under 200 char limit)
+      const compactMetadata = {
+        addr: fullAddress.substring(0, 30),
+        price: formData.askingPrice,
+        roi: calculateROI(),
+        type: formData.propertyType,
+        beds: formData.bedrooms,
+        baths: formData.bathrooms
       };
 
-      // Create metadata URI
-      const metadataUri = `data:application/json;base64,${btoa(JSON.stringify(proposalMetadata))}`;
+      // Create short metadata URI that stays under 200 character contract limit
+      const metadataUri = `ipfs://mock-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
 
-      console.log('Creating property acquisition proposal:', proposalMetadata);
+      console.log('Creating property acquisition proposal:', compactMetadata);
+      console.log('Contract call parameters:', {
+        address: CONTRACT_CONFIG.propertyAcquisition.address,
+        functionName: 'createPropertyProposal',
+        args: [
+          fullAddress,
+          metadataUri,
+          parseEther(formData.askingPrice)
+        ],
+        value: parseEther('0.1'),
+        userAddress: address,
+        isConnected,
+        votingPower,
+        balance: balance?.formatted,
+        chainId: chain?.id,
+        chainName: chain?.name
+      });
 
-      // Create the proposal on-chain
+      // Check if user has enough ETH for the bond
+      const requiredEth = parseEther('0.1');
+      if (balance && balance.value < requiredEth) {
+        console.error('Insufficient ETH for proposal bond. Required: 0.1 ETH, Available:', balance.formatted);
+        alert(`Insufficient ETH for proposal bond. Required: 0.1 ETH, Available: ${balance.formatted} ETH`);
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Create the proposal on-chain with correct parameters
       writeContract({
         address: CONTRACT_CONFIG.propertyAcquisition.address,
         abi: CONTRACT_CONFIG.propertyAcquisition.abi,
         functionName: 'createPropertyProposal',
         args: [
-          proposalMetadata.title,
-          proposalMetadata.description,
           fullAddress,
-          parseEther(formData.askingPrice),
-          parseEther(formData.expectedMonthlyRent),
-          metadataUri
+          metadataUri,
+          parseEther(formData.askingPrice)
         ],
+        value: parseEther('0.1'), // Required MIN_PROPOSAL_BOND
       });
 
     } catch (error) {
@@ -419,7 +476,7 @@ export const EnhancedPropertyAcquisitionForm: React.FC<EnhancedPropertyAcquisiti
                 <select
                   value={formData.propertyType}
                   onChange={(e) => handleInputChange('propertyType', e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-gray-900 bg-white"
                 >
                   <option value="Residential">Residential</option>
                   <option value="Commercial">Commercial</option>
@@ -536,12 +593,36 @@ export const EnhancedPropertyAcquisitionForm: React.FC<EnhancedPropertyAcquisiti
                 <CardContent className="p-4">
                   <div className="flex items-center space-x-3">
                     <Loader2 size={20} className="text-amber-600 animate-spin" />
-                    <div>
+                    <div className="flex-1">
                       <h4 className="font-semibold text-amber-800">Processing Oracle Request</h4>
                       <p className="text-amber-700 text-sm">
                         {currentRequest?.status === 'PENDING' && 'Submitting request to blockchain...'}
                         {currentRequest?.status === 'PROCESSING' && 'Chainlink DON processing valuation...'}
                       </p>
+                      {isRequesting && (
+                        <div className="mt-2">
+                          <p className="text-amber-600 text-xs">
+                            Note: If transaction is rejected or fails, mock data will be provided automatically.
+                          </p>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              // Reset oracle and proceed with demo data
+                              resetOracle();
+                              // Immediately mark as having valuation with demo data
+                              setTimeout(() => {
+                                // This will trigger the demo flow
+                                const propertyIdentifier = `${formData.address}, ${formData.city}, ${formData.state} ${formData.zipCode}`;
+                                requestValuation(propertyIdentifier, 'FULL');
+                              }, 100);
+                            }}
+                            className="mt-2 text-xs"
+                          >
+                            Use Demo Data Instead
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </CardContent>
@@ -607,9 +688,22 @@ export const EnhancedPropertyAcquisitionForm: React.FC<EnhancedPropertyAcquisiti
                 <CardContent className="p-4">
                   <div className="flex items-start space-x-2">
                     <AlertCircle size={16} className="text-red-600 mt-0.5" />
-                    <div>
-                      <h4 className="font-semibold text-red-800">Oracle Error</h4>
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-red-800">Oracle Request Issue</h4>
                       <p className="text-red-700 text-sm">{oracleError}</p>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          resetOracle();
+                          // Retry with fallback to demo data
+                          const propertyIdentifier = `${formData.address}, ${formData.city}, ${formData.state} ${formData.zipCode}`;
+                          handleRequestOracle();
+                        }}
+                        className="mt-2 text-xs"
+                      >
+                        Retry with Demo Data
+                      </Button>
                     </div>
                   </div>
                 </CardContent>
@@ -635,7 +729,7 @@ export const EnhancedPropertyAcquisitionForm: React.FC<EnhancedPropertyAcquisiti
                 onChange={(e) => handleInputChange('description', e.target.value)}
                 placeholder="Describe why this property would be a good investment for the DAO..."
                 rows={8}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-gray-900 placeholder:text-gray-500"
                 required
               />
             </div>
@@ -815,7 +909,7 @@ export const EnhancedPropertyAcquisitionForm: React.FC<EnhancedPropertyAcquisiti
               ) : (
                 <Button
                   onClick={handleSubmit}
-                  disabled={isSubmitting || isPending || isConfirming || !hasValuation}
+                  disabled={isSubmitting || isPending || isConfirming || (!hasValuation && currentRequest?.status !== 'COMPLETED')}
                   leftIcon={isSubmitting || isPending || isConfirming ? <Loader2 size={16} className="animate-spin" /> : undefined}
                 >
                   {isSubmitting || isPending || isConfirming ? 'Creating Proposal...' : 'Create Proposal'}

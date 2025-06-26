@@ -26,7 +26,7 @@ export function useEmeraldDAO() {
     args: address ? [address] : undefined,
     query: {
       enabled: !!address,
-      refetchInterval: 30000,
+      refetchInterval: 120000, // Reduced from 30s to 2 minutes for user balance
     },
   });
 
@@ -38,7 +38,7 @@ export function useEmeraldDAO() {
     args: address ? [address] : undefined,
     query: {
       enabled: !!address,
-      refetchInterval: 30000,
+      refetchInterval: 120000, // Reduced from 30s to 2 minutes for voting power
     },
   });
 
@@ -59,7 +59,7 @@ export function useEmeraldDAO() {
     abi: CONTRACT_CONFIG.vault.abi,
     functionName: 'getETHBalance',
     query: {
-      refetchInterval: 60000,
+      refetchInterval: 180000, // Reduced from 60s to 3 minutes for treasury balance
     },
   });
 
@@ -69,7 +69,7 @@ export function useEmeraldDAO() {
     abi: CONTRACT_CONFIG.vault.abi,
     functionName: 'getVaultHealthScore',
     query: {
-      refetchInterval: 60000,
+      refetchInterval: 180000, // Reduced from 60s to 3 minutes for health score
     },
   });
 
@@ -99,7 +99,7 @@ export function useEmeraldDAO() {
     abi: CONTRACT_CONFIG.vault.abi,
     functionName: 'emergencyMode',
     query: {
-      refetchInterval: 30000,
+      refetchInterval: 180000, // Reduced from 30s to 3 minutes for emergency mode
     },
   });
 

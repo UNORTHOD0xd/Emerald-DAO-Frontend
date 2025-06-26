@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useReadContract, useReadContracts, useAccount, useBlockNumber } from 'wagmi';
 import { formatEther } from 'viem';
 import { CONTRACT_CONFIG, PROPOSAL_STATES } from '@/lib/contracts';
@@ -13,9 +13,12 @@ export function useEnhancedGovernanceData() {
   const [error, setError] = useState<string | null>(null);
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
 
-  // Get current block number for time calculations
+  // Get current block number for time calculations (reduced frequency)
   const { data: currentBlock } = useBlockNumber({
-    watch: true,
+    watch: false, // Disable auto-watching to prevent constant refreshes
+    query: {
+      refetchInterval: 60000, // Only update every minute instead of every block
+    },
   });
 
   // Get governance parameters
@@ -42,33 +45,33 @@ export function useEnhancedGovernanceData() {
     address: CONTRACT_CONFIG.dao.address,
     abi: CONTRACT_CONFIG.dao.abi,
     functionName: 'quorum',
-    args: currentBlock ? [currentBlock - 1n] : undefined,
+    args: currentBlock ? [currentBlock - BigInt(1)] : undefined,
     query: {
       enabled: !!currentBlock,
     },
   });
 
-  // Get active proposals from PropertyAcquisition contract (these will be actual proposals)
-  const { data: propertyProposalIds, isLoading: propertyProposalsLoading } = useReadContract({
+  // Get all proposals from PropertyAcquisition contract (these will be actual proposals)
+  const { data: propertyProposalIds, isLoading: propertyProposalsLoading, refetch: refetchPropertyProposals } = useReadContract({
     address: CONTRACT_CONFIG.propertyAcquisition.address,
     abi: CONTRACT_CONFIG.propertyAcquisition.abi,
-    functionName: 'getActiveProposals',
+    functionName: 'getAllProposals',
     query: {
-      refetchInterval: 30000,
+      refetchInterval: 120000, // Reduced from 30s to 2 minutes
     },
   });
 
-  // Create a list of proposal IDs to query (mix of real and demo)
+  // Create a list of proposal IDs to query (real proposals + 3 demo proposals)
   const proposalIds = useMemo(() => {
     const realIds = propertyProposalIds ? (propertyProposalIds as bigint[]).map(id => Number(id)) : [];
-    // Add some demo proposal IDs if no real proposals exist
-    const demoIds = realIds.length === 0 ? [1, 2, 3] : [];
+    // Always include 3 demo proposals (using negative IDs to avoid conflicts)
+    const demoIds = [-1, -2, -3];
     return [...realIds, ...demoIds];
   }, [propertyProposalIds]);
 
-  // Batch read proposal states
+  // Batch read proposal states (only for real proposals)
   const proposalStateContracts = useMemo(() => {
-    return proposalIds.map(proposalId => ({
+    return proposalIds.filter(id => id > 0).map(proposalId => ({
       address: CONTRACT_CONFIG.dao.address,
       abi: CONTRACT_CONFIG.dao.abi,
       functionName: 'state',
@@ -76,9 +79,9 @@ export function useEnhancedGovernanceData() {
     }));
   }, [proposalIds]);
 
-  // Batch read proposal votes
+  // Batch read proposal votes (only for real proposals)
   const proposalVotesContracts = useMemo(() => {
-    return proposalIds.map(proposalId => ({
+    return proposalIds.filter(id => id > 0).map(proposalId => ({
       address: CONTRACT_CONFIG.dao.address,
       abi: CONTRACT_CONFIG.dao.abi,
       functionName: 'proposalVotes',
@@ -86,10 +89,11 @@ export function useEnhancedGovernanceData() {
     }));
   }, [proposalIds]);
 
-  // Batch read proposal snapshots and deadlines
+  // Batch read proposal snapshots and deadlines (only for real proposals)
   const proposalInfoContracts = useMemo(() => {
     const contracts = [];
-    for (const proposalId of proposalIds) {
+    const realProposalIds = proposalIds.filter(id => id > 0);
+    for (const proposalId of realProposalIds) {
       contracts.push(
         {
           address: CONTRACT_CONFIG.dao.address,
@@ -115,11 +119,11 @@ export function useEnhancedGovernanceData() {
   }, [proposalIds]);
 
   // Execute batch reads
-  const { data: proposalStates } = useReadContracts({
+  const { data: proposalStates, refetch: refetchProposalStates } = useReadContracts({
     contracts: proposalStateContracts,
     query: {
       enabled: proposalIds.length > 0,
-      refetchInterval: 15000,
+      refetchInterval: 90000, // Reduced from 15s to 90s for proposal states
     },
   });
 
@@ -127,7 +131,7 @@ export function useEnhancedGovernanceData() {
     contracts: proposalVotesContracts,
     query: {
       enabled: proposalIds.length > 0,
-      refetchInterval: 15000,
+      refetchInterval: 90000, // Reduced from 15s to 90s for proposal votes
     },
   });
 
@@ -135,14 +139,14 @@ export function useEnhancedGovernanceData() {
     contracts: proposalInfoContracts,
     query: {
       enabled: proposalIds.length > 0,
-      refetchInterval: 30000,
+      refetchInterval: 120000, // Reduced from 30s to 2 minutes for proposal info
     },
   });
 
-  // Check if user has voted on proposals
+  // Check if user has voted on proposals (only for real proposals)
   const userVoteContracts = useMemo(() => {
     if (!address) return [];
-    return proposalIds.map(proposalId => ({
+    return proposalIds.filter(id => id > 0).map(proposalId => ({
       address: CONTRACT_CONFIG.dao.address,
       abi: CONTRACT_CONFIG.dao.abi,
       functionName: 'hasVoted',
@@ -154,7 +158,7 @@ export function useEnhancedGovernanceData() {
     contracts: userVoteContracts,
     query: {
       enabled: userVoteContracts.length > 0,
-      refetchInterval: 15000,
+      refetchInterval: 120000, // Reduced from 15s to 2 minutes for user vote status
     },
   });
 
@@ -164,7 +168,7 @@ export function useEnhancedGovernanceData() {
     return realIds.map(proposalId => ({
       address: CONTRACT_CONFIG.propertyAcquisition.address,
       abi: CONTRACT_CONFIG.propertyAcquisition.abi,
-      functionName: 'getPropertyProposal',
+      functionName: 'getProposal',
       args: [BigInt(proposalId)],
     }));
   }, [propertyProposalIds]);
@@ -173,12 +177,12 @@ export function useEnhancedGovernanceData() {
     contracts: propertyProposalContracts,
     query: {
       enabled: propertyProposalContracts.length > 0,
-      refetchInterval: 30000,
+      refetchInterval: 180000, // Reduced from 30s to 3 minutes for property details
     },
   });
 
   // Generate mock proposal data for demo purposes
-  const generateMockProposal = (proposalId: number): EnhancedProposalData => {
+  const generateMockProposal = useCallback((proposalId: number): EnhancedProposalData => {
     const mockProposals = [
       {
         title: "Acquire Property: 123 Demo Street, Austin TX",
@@ -253,7 +257,7 @@ export function useEnhancedGovernanceData() {
       userHasVoted: false,
       metadata: mockData.metadata,
     };
-  };
+  }, [quorumVotes]);
 
   // Process proposal data
   useEffect(() => {
@@ -272,75 +276,109 @@ export function useEnhancedGovernanceData() {
 
         for (let i = 0; i < proposalIds.length; i++) {
           const proposalId = proposalIds[i];
-          const isRealProposal = realProposalIds.includes(proposalId);
+          const isRealProposal = proposalId > 0 && realProposalIds.includes(proposalId);
+          const isDemoProposal = proposalId < 0;
 
           if (isRealProposal && propertyProposalDetails?.[realProposalIds.indexOf(proposalId)]?.result) {
+            // Find the index in the contract data arrays (only real proposals)
+            const realProposalOnlyIds = proposalIds.filter(id => id > 0);
+            const contractDataIndex = realProposalOnlyIds.indexOf(proposalId);
             // Process real property proposal
-            const propertyData = propertyProposalDetails[realProposalIds.indexOf(proposalId)].result as any[];
-            const [title, description, propertyAddress, askingPrice, expectedRent, proposer, created, status] = propertyData;
+            const rawResult = propertyProposalDetails[realProposalIds.indexOf(proposalId)].result;
+            if (!rawResult || Array.isArray(rawResult)) {
+              continue; // Skip if no valid result
+            }
+            const propertyData = rawResult as unknown as {
+              proposer: string;
+              propertyAddress: string;
+              metadataURI: string;
+              proposedPrice: bigint;
+              oracleValuation: bigint;
+              proposalBond: bigint;
+              createdAt: bigint;
+              daoProposalId: bigint;
+              oracleComplete: boolean;
+              daoProposalCreated: boolean;
+            };
+            // Destructure the proposal tuple based on the ABI structure
+            const {
+              proposer,
+              propertyAddress,
+              metadataURI,
+              proposedPrice,
+              oracleValuation,
+              proposalBond,
+              createdAt,
+              daoProposalId,
+              oracleComplete,
+              daoProposalCreated,
+            } = propertyData;
 
-            const stateResult = proposalStates?.[i]?.result as number;
-            const votesResult = proposalVotes?.[i]?.result as [bigint, bigint, bigint];
-            const userHasVoted = userVoteStatus?.[i]?.result as boolean;
+            // For property proposals with DAO proposals, use the DAO proposal ID for voting data
+            const daoId = daoProposalCreated ? Number(daoProposalId) : proposalId;
+            const daoContractIndex = realProposalOnlyIds.indexOf(daoId);
+            
+            const stateResult = daoContractIndex >= 0 && proposalStates?.[daoContractIndex]?.result !== undefined 
+              ? Number(proposalStates[daoContractIndex].result) : undefined;
+            const votesResult = daoContractIndex >= 0 && proposalVotes?.[daoContractIndex]?.result 
+              ? proposalVotes[daoContractIndex].result as [bigint, bigint, bigint] : undefined;
+            const userHasVoted = daoContractIndex >= 0 && userVoteStatus?.[daoContractIndex]?.result !== undefined
+              ? Boolean(userVoteStatus[daoContractIndex].result) : false;
 
             // Get proposal info (snapshot, deadline, proposer)
-            const infoIndex = i * 3;
-            const snapshot = proposalInfo?.[infoIndex]?.result as bigint;
-            const deadline = proposalInfo?.[infoIndex + 1]?.result as bigint;
-            const proposerAddress = proposalInfo?.[infoIndex + 2]?.result as string;
+            const infoIndex = daoContractIndex >= 0 ? daoContractIndex * 3 : contractDataIndex * 3;
+            const snapshot = proposalInfo?.[infoIndex]?.result ? BigInt(String(proposalInfo[infoIndex].result)) : undefined;
+            const deadline = proposalInfo?.[infoIndex + 1]?.result ? BigInt(String(proposalInfo[infoIndex + 1].result)) : undefined;
+            const proposerAddress = proposalInfo?.[infoIndex + 2]?.result ? String(proposalInfo[infoIndex + 2].result) : undefined;
+
+            // Create title and description from the property data
+            const title = `Property Acquisition: ${propertyAddress}`;
+            const description = `Proposal to acquire property at ${propertyAddress} for ${formatEther(proposedPrice)} ETH. ${oracleComplete ? `Oracle valuation: ${formatEther(oracleValuation)} ETH` : 'Oracle valuation pending.'}`;
 
             const proposal: EnhancedProposalData = {
               id: `property_proposal_${proposalId}`,
-              proposalId: BigInt(proposalId),
-              title: title as string,
-              description: description as string,
-              proposer: proposerAddress || proposer as string,
-              status: getStatusFromState(stateResult),
-              votesFor: votesResult ? votesResult[1] : 0n,
-              votesAgainst: votesResult ? votesResult[0] : 0n,
-              votesAbstain: votesResult ? votesResult[2] : 0n,
-              totalVotes: votesResult ? votesResult[0] + votesResult[1] + votesResult[2] : 0n,
-              quorumReached: votesResult ? (votesResult[0] + votesResult[1] + votesResult[2]) >= (quorumVotes || 0n) : false,
-              startTime: snapshot || BigInt(Math.floor(Date.now() / 1000)),
+              proposalId: daoProposalCreated ? BigInt(daoProposalId) : BigInt(proposalId),
+              title,
+              description,
+              proposer: proposerAddress || proposer,
+              status: daoProposalCreated ? (stateResult !== undefined ? getStatusFromState(stateResult) : 'Pending') : 'Pending',
+              votesFor: votesResult ? votesResult[1] : BigInt(0),
+              votesAgainst: votesResult ? votesResult[0] : BigInt(0),
+              votesAbstain: votesResult ? votesResult[2] : BigInt(0),
+              totalVotes: votesResult ? votesResult[0] + votesResult[1] + votesResult[2] : BigInt(0),
+              quorumReached: votesResult ? (votesResult[0] + votesResult[1] + votesResult[2]) >= (quorumVotes || BigInt(0)) : false,
+              startTime: snapshot || BigInt(createdAt) || BigInt(Math.floor(Date.now() / 1000)),
               endTime: deadline || BigInt(Math.floor(Date.now() / 1000) + 604800),
               proposalType: 'Property Acquisition',
               requiredQuorum: quorumVotes || BigInt(100000),
-              userHasVoted: userHasVoted || false,
+              userHasVoted: userHasVoted,
               metadata: JSON.stringify({
-                title: title as string,
-                description: description as string,
+                title,
+                description,
                 propertyData: {
-                  address: propertyAddress as string,
-                  askingPrice: formatEther(askingPrice as bigint),
-                  expectedMonthlyRent: formatEther(expectedRent as bigint),
+                  address: propertyAddress,
+                  askingPrice: formatEther(proposedPrice),
+                  oracleValuation: oracleComplete ? formatEther(oracleValuation) : null,
+                  metadataURI,
+                  oracleComplete,
+                  daoProposalCreated,
+                  proposalBond: formatEther(proposalBond),
+                  chainlinkOracle: oracleComplete ? {
+                    estimatedValue: Number(formatEther(oracleValuation)),
+                    confidenceScore: 95, // Default confidence score
+                    dataSource: "Chainlink Real Estate Oracle v2.0"
+                  } : null
                 },
               }),
             };
 
             processedProposals.push(proposal);
-          } else {
-            // Use mock data for demo proposals
-            const mockProposal = generateMockProposal(proposalId);
+          } else if (isDemoProposal) {
+            // Use mock data for demo proposals (convert negative ID to positive for demo generation)
+            const demoId = Math.abs(proposalId);
+            const mockProposal = generateMockProposal(demoId);
             
-            // Update with real contract data if available
-            const stateResult = proposalStates?.[i]?.result as number;
-            const votesResult = proposalVotes?.[i]?.result as [bigint, bigint, bigint];
-            const userHasVoted = userVoteStatus?.[i]?.result as boolean;
-
-            if (stateResult !== undefined) {
-              mockProposal.status = getStatusFromState(stateResult);
-            }
-            if (votesResult) {
-              mockProposal.votesFor = votesResult[1];
-              mockProposal.votesAgainst = votesResult[0];
-              mockProposal.votesAbstain = votesResult[2];
-              mockProposal.totalVotes = votesResult[0] + votesResult[1] + votesResult[2];
-              mockProposal.quorumReached = mockProposal.totalVotes >= (quorumVotes || 0n);
-            }
-            if (userHasVoted !== undefined) {
-              mockProposal.userHasVoted = userHasVoted;
-            }
-
+            // Demo proposals don't have real contract data - they use the generated mock data
             processedProposals.push(mockProposal);
           }
         }
@@ -351,8 +389,8 @@ export function useEnhancedGovernanceData() {
         console.error('Error processing governance data:', err);
         setError('Failed to load governance data');
         
-        // Fallback to mock data
-        const mockProposals = proposalIds.map(id => generateMockProposal(id));
+        // Fallback to mock data (only for demo proposals)
+        const mockProposals = [-1, -2, -3].map(id => generateMockProposal(Math.abs(id)));
         setProposals(mockProposals);
       } finally {
         setIsLoading(false);
@@ -395,12 +433,22 @@ export function useEnhancedGovernanceData() {
     }
   };
 
-  // Refresh function
-  const refreshProposals = () => {
+  // Manual refresh function
+  const refreshProposals = useCallback(async () => {
     setIsLoading(true);
     setLastRefresh(new Date());
-    // The useEffect will trigger when dependencies change
-  };
+    
+    try {
+      // Trigger manual refetch of all data
+      await Promise.all([
+        refetchPropertyProposals(),
+        refetchProposalStates(),
+      ]);
+    } catch (error) {
+      console.error('Failed to refresh governance data:', error);
+      setError('Failed to refresh data');
+    }
+  }, [refetchPropertyProposals, refetchProposalStates]);
 
   return {
     proposals,
