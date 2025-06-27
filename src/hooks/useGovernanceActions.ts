@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useWriteContract, useWaitForTransactionReceipt, useAccount } from 'wagmi';
 import { parseEther, encodeAbiParameters, keccak256, toHex, encodeFunctionData } from 'viem';
 import { CONTRACT_CONFIG } from '@/lib/contracts';
+import { generateMetadataUri, validateMetadataUri, METADATA_PREFIXES } from '@/utils/metadataUtils';
 
 export interface ProposalFormData {
   title: string;
@@ -63,7 +64,8 @@ export function useGovernanceActions() {
       const propertyAddress = formData.propertyAddress || '';
       const askingPriceEther = formData.acquisitionPrice?.toString() || '0';
       
-      // Create metadata URI (in production, this would be uploaded to IPFS)
+      // Create metadata object for future IPFS upload
+      // TODO: Upload this metadata object to IPFS when IPFS integration is implemented
       const metadata = {
         title: formData.title,
         description: formData.description,
@@ -78,8 +80,16 @@ export function useGovernanceActions() {
         proposer: address,
       };
       
-      // Create short metadata URI that stays under 200 character contract limit
-      const metadataURI = `ipfs://mock-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+      // FIXED: Generate short metadata URI using utility function  
+      // This ensures consistent URI generation and validation across the app
+      // TODO: Replace with actual IPFS hash when IPFS integration is implemented
+      const metadataURI = generateMetadataUri(METADATA_PREFIXES.GOVERNANCE);
+      
+      // Validate the generated URI to prevent transaction failures
+      validateMetadataUri(metadataURI);
+      
+      console.log('Governance metadata object (for future IPFS upload):', metadata);
+      console.log('Generated metadata URI:', metadataURI);
 
       // Call property acquisition contract with correct parameters and bond
       writePropertyAcquisition({

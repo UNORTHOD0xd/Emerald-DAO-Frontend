@@ -30,6 +30,7 @@ import { useEmeraldDAO } from '@/hooks/useEmeraldDAO';
 import { useOracleIntegration } from '@/hooks/useOracleIntegration';
 import { DemoPropertySelector } from './DemoPropertySelector';
 import { type DemoProperty } from '@/data/demoProperties';
+import { generateMetadataUri, validateMetadataUri, createPropertyMetadata, METADATA_PREFIXES } from '@/utils/metadataUtils';
 
 interface PropertyFormData {
   address: string;
@@ -130,7 +131,7 @@ export const EnhancedPropertyAcquisitionForm: React.FC<EnhancedPropertyAcquisiti
     }
   }, [preSelectedProperty]);
 
-  // Monitor transaction states for debugging
+  // Monitor transaction states for debugging with enhanced metadata error detection
   useEffect(() => {
     if (proposalError) {
       console.error('Transaction Error:', proposalError);
@@ -140,6 +141,14 @@ export const EnhancedPropertyAcquisitionForm: React.FC<EnhancedPropertyAcquisiti
         cause: proposalError.cause,
         stack: proposalError.stack
       });
+
+      // Enhanced error handling for metadata URI length issues
+      if (proposalError.message?.includes('Invalid metadata URI length') || 
+          proposalError.message?.includes('Metadata URI too long')) {
+        console.error('METADATA URI LENGTH ERROR DETECTED');
+        alert('Proposal failed: Metadata URI exceeded size limit. This has been fixed in the latest version.');
+      }
+      
       setIsSubmitting(false);
     }
   }, [proposalError]);
@@ -358,20 +367,33 @@ export const EnhancedPropertyAcquisitionForm: React.FC<EnhancedPropertyAcquisiti
     try {
       const fullAddress = `${formData.address}, ${formData.city}, ${formData.state} ${formData.zipCode}`;
       
-      // Create lightweight proposal metadata (under 200 char limit)
-      const compactMetadata = {
-        addr: fullAddress.substring(0, 30),
-        price: formData.askingPrice,
-        roi: calculateROI(),
-        type: formData.propertyType,
-        beds: formData.bedrooms,
-        baths: formData.bathrooms
-      };
+      // Create comprehensive proposal metadata for future IPFS upload
+      // TODO: Upload this metadata object to IPFS when IPFS integration is implemented
+      const proposalMetadata = createPropertyMetadata(
+        {
+          address: fullAddress,
+          price: formData.askingPrice,
+          roi: calculateROI(),
+          type: formData.propertyType,
+          beds: formData.bedrooms,
+          baths: formData.bathrooms,
+          sqft: formData.sqft,
+          description: formData.description,
+        },
+        address!
+      );
 
-      // Create short metadata URI that stays under 200 character contract limit
-      const metadataUri = `ipfs://mock-${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
+      // FIXED: Generate short metadata URI using utility function
+      // This ensures consistent URI generation and validation across the app
+      // TODO: Replace with actual IPFS hash when IPFS integration is implemented
+      const metadataUri = generateMetadataUri(METADATA_PREFIXES.PROPERTY);
+      
+      // Validate the generated URI to prevent transaction failures
+      validateMetadataUri(metadataUri);
+      
+      console.log('Proposal metadata object (for future IPFS upload):', proposalMetadata);
 
-      console.log('Creating property acquisition proposal:', compactMetadata);
+      console.log('Creating property acquisition proposal with metadata URI:', metadataUri);
       console.log('Contract call parameters:', {
         address: CONTRACT_CONFIG.propertyAcquisition.address,
         functionName: 'createPropertyProposal',
